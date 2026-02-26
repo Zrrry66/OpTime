@@ -1,0 +1,335 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{parskip}
+
+% find all images in this folder
+\graphicspath{ {./img/} }
+
+\geometry{margin=1in}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    language=Python
+}
+
+\title{\textbf{OpTime: Optimising Timetables} \\ \large Project Report: UI/UX, Gurobi, and Simulated Annealing}
+
+\author{
+    \textbf{Front-End \& UI/UX Group} \\
+    Haonan Wu (126815), Ruyue Zhao (127561) \\[1ex]
+    \textbf{Gurobi Optimization Group} \\
+    Polina Evgrafova, Catalin Viscun\\[1ex]
+    \textbf{Simulated Annealing Group} \\
+    Abenezer Belay, Chaithanya Thalapaneni
+}
+\date{WiSe 2025 \\ Advisor: Andreas Jakoby}
+
+\begin{document}
+
+\maketitle
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introduction}
+Timetable scheduling is a hard problem. The number of possible combinations of courses, rooms, time slots, and lecturers grows very fast, and finding a schedule that satisfies everyone's constraints manually is both slow and error-prone.
+
+The project is a web-based tool to automate this process for the Faculty of Media, and it was developed by three sub-teams:
+
+\begin{itemize}
+    \item \textbf{Frontend (UI/UX)}: Built the user interface for managing lecturers, courses, and rooms, and for visualizing the generated timetable.
+    \item \textbf{Gurobi}: Used Integer Linear Programming to generate an initial valid schedule that satisfies all hard constraints.
+     \item \textbf{Simulated Annealing}: Applied a metaheuristic algorithm to improve the current schedule by reducing soft constraint violations.
+\end{itemize}
+
+The three parts work together in a user-driven process: the frontend collects all input data and sends it to the Gurobi solver to create a base schedule. Users can then manually adjust the results through the interface. After that, the Simulated Annealing module takes that version and improves it further. The final result is shown on the frontend, ready to be reviewed and exported. This document covers each component in detail.
+
+% ==========================================
+% PART I: Front-end, UI/UX
+% ==========================================
+\section{Part I: Front-End Design \& Implementation}
+The front end serves as the central interface of the OpTime system, acting as the bridge between administrators and the two backend solvers. All user inputs, including lecturer availability constraints, course configurations and room capacities etc., are entered here and translated into structured data for the optimization engines. Conversely, solver outputs from both Gurobi and Simulated Annealing are parsed and rendered as readable and interactive timetables.
+\subsection{UI/UX Design \& User Experience}
+\subsubsection{Information Hierarchy and Navigation}
+The OpTime application follows a Dashboard-Centric layout designed for maximum administrative efficiency. The visual architecture is structured to ensure that critical navigation and data operations are always within one click of the user's focus (see Figure \ref{fig:dashboard}).
+\begin{itemize}
+    \item \textbf{Global Navigation}: The left-hand sidebar serves as the primary router, allowing instant switching between \textbf{Lecturers}, \textbf{Courses}, and \textbf{Rooms}. This persistent placement ensures that the user never loses their sense of location within the data hierarchy.
+    \item \textbf{Version Control (Saved Schedules)}: A standout feature is the \textbf{Saved Schedules} repository in the sidebar. It tracks historical schedule generations with precise timestamps (e.g., \textit{Schedule 16:08:52}). This allows administrators to experiment with different constraints and revert to previous ``optimal'' states via the \textbf{Restore Data} button.
+    \item \textbf{Data Grid System}: As demonstrated in the Lecturer and Course views, the system utilizes a high-density table format. Each row features \textbf{Status Badges} (e.g.,``Active'' in mint green) to provide immediate visual confirmation of which entities are currently included in the solver's scope.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Documentation/img/ui_main_dashboard.png}
+    \caption{The OpTime main control panel, illustrating the side-panel version control and the responsive data management table.}
+    \label{fig:dashboard}
+\end{figure}
+
+\subsubsection{The Multi-Dimensional Availability Matrix}
+To address the inherent complexity of faculty time preferences, we developed an \textbf{Interactive Availability Matrix} (see Figure \ref{fig:matrix}). This component acts as the primary interface for translating human availability into the mathematical constraints used by the solvers.
+These categories (Red/Yellow) correspond directly to the hard and soft constraint weights in the optimization engine.
+
+\begin{itemize}
+    \item \textbf{Grid-Based Selection}: The matrix covers a 7-day week with predefined 90-minute time slots (spanning from 07:30 to 20:30). Each cell is an interactive toggle.
+    \item \textbf{Semantic Constraint Categorization}: 
+        \begin{itemize}
+            \item \textbf{Mint Green (Available)}: Open slots which the solver is encouraged to use.
+            \item \textbf{Amber (Preferred - Soft)}: Indicates slots that the "Improve" algorithm should prioritize to maximize lecturer satisfaction.
+            \item \textbf{Coral Red (Unavailable)}: Represents hard constraints that the solver is strictly prohibited from occupying.
+        \end{itemize}
+    \item \textbf{Efficiency Overlays}: The modal includes "Set to Available" and "Reset Schedule" batch actions, significantly reducing the manual labor required to configure a full-week schedule for 20+ lecturers.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Documentation/img/ui_availability_matrix.png}
+    \caption{Detailed view of the Lecturer Availability Matrix, showing the three-tier coloring system for hard and soft constraints.}
+    \label{fig:matrix}
+\end{figure}
+
+\subsubsection{Contextual Workflow via Dynamic Modals}
+Data entry for complex entities is managed through \textbf{Dynamic Overlay Modals} (see Figure \ref{fig:course_modal}), which maintain the user's place in the main list while providing a focused environment for input.
+\begin{itemize}
+    \item \textbf{Intelligent Field Linking}: The "Add Course" modal allows for multi-lecturer selection and curriculum allocations (e.g., "Mandatory" vs. "Elective"). This ensures that the front-end captures all parameters required by the Gurobi and SA solvers.
+    \item \textbf{Real-Time Validation}: The UI provides instant browser-level feedback to ensure data integrity before the information is committed to the database.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Documentation/img/ui_add_course_modal.png}
+    \caption{The "Add Course" modal demonstrating multi-select lecturer logic and curriculum allocation fields.}
+    \label{fig:course_modal}
+\end{figure}
+
+\subsubsection{Output Visualization: The Generated Timetable}
+The final product of the OpTime system is rendered in a \textbf{Dynamic Weekly Planner} format (see Figure \ref{fig:timetable}), transforming raw solver data into a human-readable schedule.
+\begin{itemize}
+    \item \textbf{Contextual Course Cards}: Each session card is automatically color-coded and displays essential metadata: Course Name, Lecturer, and Room Code.
+    \item \textbf{The Diagnostic Gateway}: A high-visibility \textbf{"View Report"} button (Red) provides access to a detailed modal that categorizes any soft conflicts, allowing for transparent "Human-in-the-loop" decision making.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Documentation/img/ui_generated_timetable.png}
+    \caption{The final generated timetable, showcasing the adaptive 2D grid and the diagnostic reporting triggers.}
+    \label{fig:timetable}
+\end{figure}
+
+\subsection{Technical Implementation}
+
+\subsubsection{Front-End Architecture}
+The front-end is developed using a component-based approach to ensure scalability. By separating the logic for the \textbf{Data Tables}, \textbf{Schedule Grid}, and \textbf{Notification Modals}, we achieved a highly responsive system.
+\begin{itemize}
+    \item \textbf{Framework}: JavaScript (ES6+) for dynamic DOM manipulation and state management.
+    \item \textbf{Styling}: Custom CSS3 with Flexbox and Grid for the timetable's complex 2D-layout.
+\end{itemize}
+
+\subsubsection{The Dynamic Timetable Engine}
+The most technically demanding feature is the \textbf{Interactive Schedule Grid} (as shown in the simulation):
+\begin{itemize}
+    \item \textbf{State-Driven Rendering}: The grid dynamically maps JSON-formatted schedule data into visual "Course Cards." Each card’s position is calculated based on its time-slot and day index.
+    \item \textbf{Conflict Visualization}: We implemented a real-time validation layer. When the system detects a scheduling overlap (e.g., a lecturer assigned to two rooms at once), the card's border color triggers a state change to \textbf{Red}, providing immediate UI feedback.
+    \item \textbf{Drag-and-Drop Interaction}: Users can manually override the algorithm by moving cards. The system re-validates the constraints on every "drop" event.
+\end{itemize}
+
+\subsubsection{Asynchronous Operation Handling}
+To maintain a smooth user experience during heavy computations:
+\begin{itemize}
+    \item \textbf{Loading States}: During the "Improve Schedule" phase, an animated overlay provides visual feedback that the back-end optimization algorithm is processing.
+    \item \textbf{Promise-based API Calls}: Used \texttt{fetch} to communicate with the server-side solver, allowing the UI to remain interactive while waiting for the optimized timetable result.
+\end{itemize}
+
+\subsection{Data Interaction \& Integration}
+
+\subsubsection{Bridge Between User and Algorithm}
+The front-end acts as a sophisticated visual interpreter for the back-end optimization solver. The integration focuses on converting raw mathematical constraints into actionable user information.
+
+\subsubsection{Intelligent Conflict Reporting}
+One of the system's core strengths is the \textbf{Generation Report} modal (as seen in the workflow):
+\begin{itemize}
+    \item \textbf{Categorized Feedback}: The front-end parses JSON response logs into two distinct categories: 
+        \begin{itemize}
+            \item \textbf{Critical Issues}: (Red) Logical impossibilities, such as "Lecturer Availability Conflict."
+            \item \textbf{Preference Warnings}: (Yellow) Soft constraint violations, such as "Insufficient Room Capacity" or building mismatches.
+        \end{itemize}
+    \item \textbf{Traceability}: Each error message is linked to specific IDs, allowing users to pinpoint which course or room requires manual adjustment.
+\end{itemize}
+
+\subsubsection{Optimization Workflow \& Persistence}
+\begin{itemize}
+    \item \textbf{Iterative Improvement}: The \textbf{"Improve"} button triggers a POST request that sends the user's manual adjustments back to the solver. This creates a "Human-in-the-loop" optimization cycle where the AI refines the user's manual layout.
+    \item \textbf{Data Export}: Integrated a PDF generation library that captures the high-fidelity CSS grid of the timetable and converts it into a print-ready document via the \textbf{"Export PDF"} trigger.
+    \item \textbf{State Persistence}: Implemented "Backup" and "Restore" functionality to ensure that complex scheduling progress is saved to the local storage or database, preventing data loss.
+\end{itemize}
+
+Our front-end solution successfully bridges the gap between complex algorithmic outputs and intuitive academic management. By providing real-time visual feedback and structured reporting, we have transformed a high-dimensional optimization problem into a manageable, user-friendly administrative tool.
+
+
+% ==========================================
+% PART II: GUROBI
+% ==========================================
+
+\section{Part II: Exact Optimization via Gurobi}
+While the Simulated Annealing module provides a fast, stochastic approach to timetable optimization, the Gurobi module takes a complementary strategy: it formulates the scheduling problem as an Integer Linear Program (ILP) and solves it to provable optimality. Integer Linear Programming is a mathematical framework in which the goal is to minimize (or maximize) a linear objective function subject to a set of linear constraints, where some or all decision variables are restricted to integer values. For binary scheduling decisions — such as whether a course is assigned to a particular room, time slot, and lecturer — this framework is a natural fit.
+
+Gurobi is a state-of-the-art commercial solver for mathematical optimization problems, widely used in both industry and academic research. Compared to open-source alternatives such as GLPK or CBC, Gurobi offers significantly faster solve times on large ILP instances, a clean Python API (gurobipy), and an academic license that makes it accessible for university projects. The key trade-off between the two approaches in OpTime is as follows: Gurobi guarantees finding the globally optimal schedule but it takes much longer as the problem size grows; Simulated Annealing handles large tasks much better but it doesn't guarantee a perfect result. Together, they give users a practical choice based on their specific needs.
+\subsection{Problem Formulation}
+\subsubsection{Decision Variables}
+\subsubsection{Hard Constraints}
+\subsubsection{Soft Constraints}
+\subsubsection{Objective Function}
+
+\subsection{Implementation Details}
+
+\subsection{Integration with the Frontend}
+
+\subsection{Results and Evaluation}
+
+% ==========================================
+% {Part III: Heuristic Optimization via Simulated Annealing
+% ==========================================
+
+\section{Part III: Heuristic Optimization via Simulated Annealing (SA)}
+% Added this introduction paragrapgh. changed the hierarchy of the titles. The rest remain the same. Maybe you could also add a conclusion paragrapgh
+
+While the Gurobi solver guarantees the best possible schedule for smaller tasks, the Simulated Annealing (SA) module is a faster alternative for larger and more complex problems. SA doesn't guarantee a 'perfect' mathematical solution, but it quickly finds high-quality schedules—much faster than trying every possible combination. This makes it perfect for the real-time updates in the OpTime frontend.
+
+\subsection{Simulated Annealing Algorithm}
+
+The physical process of Annealing in metallurgy inspires Simulated Annealing. When you heat metal and then cool it slowly, the atoms have enough energy to move around and settle into a low-energy, stable configuration. If you cool it too quickly, the atoms get stuck in a suboptimal arrangement.
+
+In optimization, we use this analogy. The "energy" of our system is the cost of a schedule—i.e., the number of constraint violations it has. We start with a random schedule and make small changes to it. Here is the key insight: early in the process (at high temperature), we accept many changes, even those that make the schedule slightly worse. Starting with high temperature prevents us from getting stuck in a local optimum—a schedule that's better than all its neighbors but not the best possible schedule overall. As we continue (lowering temperature), we become more selective, mainly accepting improvements.
+
+The temperature parameter $\tau(t)$ controls this behavior. At high temperatures, we explore the solution space widely. At low temperatures, we exploit reasonable solutions by making minor refinements.
+
+\subsubsection{Four Required Components}
+
+To apply Simulated Annealing to the timetabling problem, we must define four components: the solution space, the cost function, the neighbor relation, and the optimization goal.
+
+\paragraph{Solution Space}
+
+The solution space $C$ is the set of all possible complete assignments. A solution $S \in C$ is a complete assignment of all courses in $B$ to resources in $E$.
+
+Let $B$ be the set of courses. Let $E = R \times T \times L$ where $R$ is the set of rooms, $T$ is the set of time slots, and $L$ is the set of lecturers.
+
+A solution $S$ assigns to each course $b \in B$ a triple consisting of room, time slot, and lecturer. For example:
+$$S(\text{Photogrammetric CV}) = (\text{SR\_A}, \text{Mon-09:15-10:45}, \text{Prof. Rodehorst})$$
+
+This means Photogrammetric CV is scheduled in room SR\_A on Monday from 9:15 to 10:45, taught by Prof. Rodehorst.
+
+\paragraph{Cost Function}
+
+The cost function $c : C \to \mathbb{R}$ measures how bad a schedule is. Lower cost means better schedule. We define:
+$$c(S) = w_1 \cdot f_1(S) + w_2 \cdot f_2(S) + ... + w_n \cdot f_n(S)$$
+
+where $f_i$ are individual penalty functions and $w_i$ are weights representing constraint importance.
+
+For our implementation:
+$$c(S) = 100 \cdot (\text{room conflicts}) + 100 \cdot (\text{lecturer conflicts}) + 50 \cdot (\text{workload}) + 10 \cdot (\text{gaps}) + 10 \cdot (\text{Friday})$$
+
+For example, if a schedule has 2 room conflicts, 1 Friday afternoon class, and 3 student gaps:
+$$c(S) = 100 \times 2 + 10 \times 1 + 10 \times 3 = 240$$
+
+The penalties are classified by severity:
+\begin{itemize}
+    \item Hard constraints (weight = 100): Must be satisfied. Examples: no room conflicts, no lecturer conflicts
+    \item Medium constraints (weight = 50): Important quality indicators. Example: maximum daily workload
+    \item Soft constraints (weight = 10): Preferences. Examples: minimize gaps, avoid Friday afternoons
+\end{itemize}
+
+\paragraph{Optimization Goal}
+
+Our optimization problem is to find a solution $S^* \in C$ such that for all $S \in C$:
+$$c(S^*) \leq c(S)$$
+
+We call such $S^*$ an optimal solution.
+
+\paragraph{Neighbor Relation}
+
+We define a binary relation $\sim$ on $C \times C$. For $S, S' \in C$, we say $S \sim S'$ if and only if we can obtain $S'$ from $S$ by exactly one of the following operations.
+
+\textbf{Technique 1: Construct and destroy}
+
+We select one course $b \in B$. Let $e$ be the current resource assigned to $b$ in $S$. We choose a new resource $e' \in E$ and create:
+$$S' = (S \setminus \{(b,e)\}) \cup \{(b,e')\}$$
+
+We remove exactly one assignment (the old one for course $b$) and add exactly one assignment (the new one for course $b$).
+
+Example: Move Photogrammetric CV from (SR\_A, Mon-09:15, Prof. Rodehorst) to (SR\_H, Tue-09:15, Prof. Rodehorst).
+
+\textbf{Technique 2: Swap Operation}
+
+We select two courses $b_1, b_2 \in B$ with $b_1 \neq b_2$, and their resources $e_1, e_2 \in E$ where $(b_1,e_1) \in S$ and $(b_2,e_2) \in S$, then:
+$$S' = (S \setminus \{(b_1,e_1), (b_2,e_2)\}) \cup \{(b_1,e_2), (b_2,e_1)\}$$
+
+Example: Swap Virtual Reality at (SR\_H, Wed-13:30) with HCI Theory at (LH\_HK7, Mon-13:30).
+
+We define the neighborhood of solution $S$ as:
+$$N(S) := \{S' \in C | S \sim S'\}$$
+
+\subsubsection{The Algorithm}
+
+The Simulated Annealing algorithm proceeds as follows:
+
+\begin{verbatim}
+Algorithm: MinimizationSimulatedAnnealing(I)
+Input: instance I
+Output: solution S
+
+1: let S be an initial solution S_0
+2: let k be a constant
+3: let t = 0
+4: while we continue do
+5:     let S' in N(S) be chosen randomly
+6:     if c(S') <= c(S) then
+7:         S := S'
+8:     else
+9:         with probability e^(-(c(S')-c(S))/(k*tau(t))) let S := S'
+10:        otherwise let S unchanged
+11:    end if
+12:    t := t + 1
+13: end while
+14: Return(S)
+\end{verbatim}
+
+\subsubsection{Acceptance Probability}
+
+When we generate a neighbor schedule $S'$ from current schedule $S$, we calculate the cost difference:
+$$\Delta = c(S') - c(S)$$
+
+If $\Delta < 0$, the neighbor is better—we always accept it. If $\Delta > 0$, the neighbor is worse—we accept it with probability:
+$$P(\text{accept}) = e^{-\Delta / (k \cdot \tau(t))}$$
+
+where $k$ is a constant and $\tau(t)$ is the current temperature.
+
+Example: Current schedule has cost 200, neighbor has cost 250, temperature is 100, and $k=1$. Then $\Delta = 50$ and $P(\text{accept}) = e^{-0.5} \approx 0.606$ (60\% chance). This probability decreases as temperature drops.
+
+Our implementation guarantees that hard constraints are never violated by validating each neighbor during generation, ensuring only valid neighbors are considered.
+
+\subsection{Results and Evaluation}
+% you can add a short paragraph here summarizing the practical performance of the SA algorithm, and any limitations
+
+\section{Conclusion}
+OpTime started as a project for the Faculty of Media, but the system is general enough to be extended to other faculties or even the whole university with relatively small changes to the data model.
+
+The workflow: Generate, Adjust manually, Improve keeps the process transparent and gives administrators control over the final result. The frontend hides the complexity of the two solvers and presents everything as a simple, visual interface.
+
+% For future improvment, please check and feel free to add anything I might have missed.
+
+For future work, the SA algorithm could be tuned further to get better results faster. The Gurobi model could also be tested on larger datasets beyond the Faculty of Media. On the frontend side, features like importing data directly from university systems would make the tool much more practical in a real administrative setting.
+\end{document}

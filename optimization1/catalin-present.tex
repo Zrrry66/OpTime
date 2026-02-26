@@ -1,0 +1,182 @@
+\documentclass[10pt]{beamer}
+
+\usetheme{Madrid}
+\usefonttheme{professionalfonts}
+\setbeamertemplate{footline}[frame number]
+\setbeamercovered{transparent}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{xcolor}
+\renewcommand{\algorithmiccomment}[1]{\hfill$\triangleright$\textcolor{WildStrawberry}{#1}}
+\usepackage{float}
+
+\begin{document}
+
+\title{Graphs}
+\author{Polina Evgrafova,Catalin Viscun}
+\date{November 12, 2025}
+
+\begin{frame}
+    \maketitle
+\end{frame}
+
+% ------------------------------------------------------------------------------------------------
+% GRAPH COLORING SECTION
+% ------------------------------------------------------------------------------------------------
+
+\section{Graph Coloring Basics}
+
+\begin{frame}{Grundidee der Graphfärbung}
+    \small
+    \begin{itemize}
+        \item Das Ziel der Graphfärbung ist es, jedem Knoten eines Graphen eine Farbe zuzuweisen, sodass keine zwei benachbarten Knoten dieselbe Farbe erhalten.
+        \item Die kleinste Anzahl an Farben, die dafür nötig ist, wird \textbf{chromatische Zahl} $\chi(G)$ genannt.
+        \item Dieses Prinzip dient als Modell für zahlreiche Planungs- und Zuweisungsprobleme, bei denen sich bestimmte Ereignisse, Ressourcen oder Entitäten nicht überlappen dürfen.
+        \item In der Stundenplanerstellung entspricht eine Farbe einem \textbf{Zeitslot}: zwei verbundene Knoten dürfen nicht gleichzeitig stattfinden.
+        \item Die Färbung macht Konflikte mathematisch sichtbar und ermöglicht algorithmische Optimierung.
+    \end{itemize}
+
+    \vspace{1em}
+    \textbf{Formale Definition:}
+    \[
+        c: V(G) \rightarrow \{1, 2, \dots, k\} \quad \text{mit} \quad (u,v) \in E(G) \Rightarrow c(u) \neq c(v)
+    \]
+\end{frame}
+
+\begin{frame}{Algorithmische Grundidee}
+    \small
+    \begin{itemize}
+        \item Das Problem ist \textbf{NP-schwer}: Es gibt keine bekannte polynomielle Methode, die garantiert die minimale Anzahl an Farben findet.
+        \item Praktisch werden daher heuristische oder approximative Verfahren genutzt, die in endlicher Zeit brauchbare Ergebnisse liefern.
+        \item Einfache Heuristik: \textbf{Greedy Coloring}
+        \begin{itemize}
+            \item Knoten werden nach bestimmtem Kriterium (z. B. Knotengrad) sortiert.
+            \item Jeder Knoten erhält die kleinste mögliche Farbe, die nicht bei seinen Nachbarn vorkommt.
+        \end{itemize}
+        \item Erweiterte Verfahren: \textbf{DSATUR} (Degree of Saturation) priorisiert Knoten, deren Nachbarschaft bereits stark eingefärbt ist.
+        \item Für exakte Lösungen werden \textbf{Backtracking-} oder \textbf{Branch\&Bound-Methoden} verwendet, die jedoch exponentiell wachsen.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Mathematische Modellierung (ILP)}
+    \small
+    \[
+        x_{ij} =
+        \begin{cases}
+            1 & \text{wenn Knoten } i \text{ Farbe } j \text{ erhält} \\
+            0 & \text{sonst}
+        \end{cases}
+    \]
+    Nebenbedingungen:
+    \[
+        \sum_j x_{ij} = 1 \quad \forall i
+    \]
+    \[
+        x_{ij} + x_{kj} \le 1 \quad \forall (i,k) \in E(G)
+    \]
+    Ziel:
+    \[
+        \min \sum_j y_j \quad \text{mit } y_j \ge x_{ij}
+    \]
+
+    \vspace{0.5em}
+    \begin{itemize}
+        \item Diese ILP-Formulierung erlaubt es, Graphfärbung als lineares Optimierungsproblem zu behandeln.
+        \item Das Modell wird häufig in Stundenplanungssoftware verwendet, da es leicht mit weiteren Nebenbedingungen kombinierbar ist (Räume, Präferenzen, Lehrer, Ressourcen).
+    \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------------------------------------------
+% SPECIAL CASES
+% ------------------------------------------------------------------------------------------------
+
+\section{Spezialfälle der Graphfärbung}
+
+\begin{frame}{Vertex Coloring}
+    \small
+    \begin{itemize}
+        \item Klassischste Form der Graphfärbung.
+        \item Knoten repräsentieren Entitäten (z. B. Kurse oder Prüfungen), Kanten stellen Konflikte dar.
+        \item Farben stehen für Zeitslots, sodass keine zwei verbundene Knoten gleichzeitig stattfinden.
+        \item Wird in der Stundenplanung eingesetzt, um die minimale Anzahl an Zeitslots zu bestimmen.
+        \item Effizient kombinierbar mit zusätzlichen Restriktionen wie Raumkapazität oder Dozentenverfügbarkeit.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Edge Coloring}
+    \small
+    \begin{itemize}
+        \item Bei der Kantenfärbung werden nicht die Knoten, sondern die \textbf{Kanten} eingefärbt.
+        \item Zwei Kanten, die denselben Knoten teilen, dürfen nicht dieselbe Farbe haben.
+        \item Farben können hier für Zeitslots stehen, während Knoten Ressourcen (z. B. Räume, Lehrer) darstellen.
+        \item Ziel: Jede Ressource wird in einem bestimmten Zeitfenster nur einmal genutzt.
+        \item Besonders geeignet für Probleme, bei denen Ressourcenverteilung zentral ist.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{List Coloring}
+    \small
+    \begin{itemize}
+        \item Jeder Knoten besitzt eine eingeschränkte Menge möglicher Farben (eine individuelle „Liste“).
+        \item Modelliert Verfügbarkeit oder Präferenzen, z. B.:
+        \begin{itemize}
+            \item Eine Lehrperson kann nur Montag und Mittwoch unterrichten.
+            \item Ein Raum steht nur zu bestimmten Zeiten zur Verfügung.
+        \end{itemize}
+        \item Aufgabe: Finde eine gültige Färbung, bei der die Farbe jedes Knotens aus seiner Liste stammt.
+        \item Erweitert klassische Färbung um reale Einschränkungen.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Multi-Coloring}
+    \small
+    \begin{itemize}
+        \item Ein Knoten erhält nicht nur eine, sondern mehrere Farben.
+        \item Repräsentiert Entitäten, die mehrfach pro Woche oder mehrfach im Plan auftreten müssen (z. B. drei Vorlesungstermine).
+        \item Bedingung bleibt: Keine Nachbarknoten dürfen eine gemeinsame Farbe besitzen.
+        \item Praktische Bedeutung in Stundenplänen, die Mehrfachsitzungen pro Kurs beinhalten.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Weighted und Dynamic Coloring}
+    \small
+    \textbf{Weighted Coloring}
+    \begin{itemize}
+        \item Konflikte oder Präferenzen werden mit Gewichten versehen.
+        \item Ziel: Minimierung der Gesamtkosten oder Strafen bei Verletzungen weicher Regeln.
+        \item Beispiel: Ein unerwünschter, aber zulässiger Paralleltermin hat geringes Gewicht, ein verbotener Konflikt hohes Gewicht.
+    \end{itemize}
+
+    \vspace{0.5em}
+    \textbf{Dynamic Coloring}
+    \begin{itemize}
+        \item Verwendet für Situationen, in denen sich der Graph im Lauf der Zeit verändert (z. B. neue Kurse, Raumänderungen).
+        \item Ziel: Anpassung der bestehenden Färbung mit minimalen Änderungen.
+        \item Relevant bei inkrementeller Stundenplanaktualisierung.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Hypergraph Coloring}
+    \small
+    \begin{itemize}
+        \item Erweiterung auf \textbf{Hypergraphen}, bei denen Kanten mehr als zwei Knoten verbinden können.
+        \item Eine Hyperkante kann z. B. alle Veranstaltungen umfassen, die denselben Raum gleichzeitig beanspruchen.
+        \item Färbung stellt sicher, dass kein Element einer Hyperkante dieselbe Farbe hat wie ein anderes derselben Gruppe.
+        \item Wird eingesetzt, wenn Abhängigkeiten nicht nur paarweise auftreten (z. B. Team-Teaching oder Gruppenkurse).
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Fazit}
+    \small
+    \begin{itemize}
+        \item Graph Coloring ist das grundlegende Prinzip graphbasierter Stundenplanung.
+        \item Alle Varianten (Vertex-, Edge-, List-, Multi-, Weighted-, Hypergraph Coloring) erweitern das Grundmodell um spezifische Randbedingungen.
+        \item Effektiv, weil Konflikte explizit abgebildet werden und algorithmisch lösbar sind.
+        \item Für mittlere Problemgrößen liefern heuristische Verfahren meist in Sekunden bis Minuten brauchbare, konfliktfreie Lösungen.
+        \item In großen, realen Szenarien oft Teil eines hybriden Systems mit Constraint Programming oder Linearer Optimierung.
+    \end{itemize}
+\end{frame}
+
+
+\end{document}

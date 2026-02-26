@@ -1,0 +1,136 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amssymb}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    language=Python
+}
+
+\title{Optimization}
+\author{Chaithanya Thalapaneni, Abenezer Belay}
+\date{October 2025}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\section{Simulated Annealing Algorithm}
+
+The physical process of Annealing in metallurgy inspires Simulated Annealing. When you heat metal and then cool it slowly, the atoms have enough energy to move around and settle into a low-energy, stable configuration. If you cool it too quickly, the atoms get stuck in a suboptimal arrangement.
+
+In optimization, we use this analogy. The "energy" of our system is the cost of a schedule—i.e., the number of constraint violations it has. We start with a random schedule and make small changes to it. Here is the key insight: early in the process (at high temperature), we accept many changes, even those that make the schedule slightly worse. Starting with high temperature prevents us from getting stuck in a local optimum—a schedule that's better than all its neighbors but not the best possible schedule overall. As we continue (lowering temperature), we become more selective, mainly accepting improvements.
+
+The temperature parameter $\tau(t)$ controls this behavior. At high temperatures, we explore the solution space widely. At low temperatures, we exploit reasonable solutions by making minor refinements.
+
+\subsection{Four Required Components}
+
+To apply Simulated Annealing to the timetabling problem, we must define four components: the solution space, the cost function, the neighbor relation, and the optimization goal.
+
+\subsubsection{Solution Space}
+
+The solution space $C$ is the set of all possible complete assignments. A solution $S \in C$ is a complete assignment of all courses in $B$ to resources in $E$.
+
+Let $B$ be the set of courses. Let $E = R \times T \times L$ where $R$ is the set of rooms, $T$ is the set of time slots, and $L$ is the set of lecturers.
+
+A solution $S$ assigns to each course $b \in B$ a triple consisting of room, time slot, and lecturer. For example:
+$$S(\text{Photogrammetric CV}) = (\text{SR\_A}, \text{Mon-09:15-10:45}, \text{Prof. Rodehorst})$$
+
+This means Photogrammetric CV is scheduled in room SR\_A on Monday from 9:15 to 10:45, taught by Prof. Rodehorst.
+
+\subsubsection{Cost Function}
+
+The cost function $c : C \to \mathbb{R}$ measures how bad a schedule is. Lower cost means better schedule. We define:
+$$c(S) = w_1 \cdot f_1(S) + w_2 \cdot f_2(S) + ... + w_n \cdot f_n(S)$$
+
+where $f_i$ are individual penalty functions and $w_i$ are weights representing constraint importance.
+
+For our implementation:
+$$c(S) = 100 \cdot (\text{room conflicts}) + 100 \cdot (\text{lecturer conflicts}) + 50 \cdot (\text{workload}) + 10 \cdot (\text{gaps}) + 10 \cdot (\text{Friday})$$
+
+For example, if a schedule has 2 room conflicts, 1 Friday afternoon class, and 3 student gaps:
+$$c(S) = 100 \times 2 + 10 \times 1 + 10 \times 3 = 240$$
+
+The penalties are classified by severity:
+\begin{itemize}
+    \item Hard constraints (weight = 100): Must be satisfied. Examples: no room conflicts, no lecturer conflicts
+    \item Medium constraints (weight = 50): Important quality indicators. Example: maximum daily workload
+    \item Soft constraints (weight = 10): Preferences. Examples: minimize gaps, avoid Friday afternoons
+\end{itemize}
+
+\subsubsection{Optimization Goal}
+
+Our optimization problem is to find a solution $S^* \in C$ such that for all $S \in C$:
+$$c(S^*) \leq c(S)$$
+
+We call such $S^*$ an optimal solution.
+
+\subsubsection{Neighbor Relation}
+
+We define a binary relation $\sim$ on $C \times C$. For $S, S' \in C$, we say $S \sim S'$ if and only if we can obtain $S'$ from $S$ by exactly one of the following operations.
+
+\textbf{Technique 1: Construct and destroy}
+
+We select one course $b \in B$. Let $e$ be the current resource assigned to $b$ in $S$. We choose a new resource $e' \in E$ and create:
+$$S' = (S \setminus \{(b,e)\}) \cup \{(b,e')\}$$
+
+We remove exactly one assignment (the old one for course $b$) and add exactly one assignment (the new one for course $b$).
+
+Example: Move Photogrammetric CV from (SR\_A, Mon-09:15, Prof. Rodehorst) to (SR\_H, Tue-09:15, Prof. Rodehorst).
+
+\textbf{Technique 2: Swap Operation}
+
+We select two courses $b_1, b_2 \in B$ with $b_1 \neq b_2$, and their resources $e_1, e_2 \in E$ where $(b_1,e_1) \in S$ and $(b_2,e_2) \in S$, then:
+$$S' = (S \setminus \{(b_1,e_1), (b_2,e_2)\}) \cup \{(b_1,e_2), (b_2,e_1)\}$$
+
+Example: Swap Virtual Reality at (SR\_H, Wed-13:30) with HCI Theory at (LH\_HK7, Mon-13:30).
+
+We define the neighborhood of solution $S$ as:
+$$N(S) := \{S' \in C | S \sim S'\}$$
+
+\subsection{The Algorithm}
+
+The Simulated Annealing algorithm proceeds as follows:
+
+\begin{verbatim}
+Algorithm: MinimizationSimulatedAnnealing(I)
+Input: instance I
+Output: solution S
+
+1: let S be an initial solution S_0
+2: let k be a constant
+3: let t = 0
+4: while we continue do
+5:     let S' in N(S) be chosen randomly
+6:     if c(S') <= c(S) then
+7:         S := S'
+8:     else
+9:         with probability e^(-(c(S')-c(S))/(k*tau(t))) let S := S'
+10:        otherwise let S unchanged
+11:    end if
+12:    t := t + 1
+13: end while
+14: Return(S)
+\end{verbatim}
+
+\subsection{Acceptance Probability}
+
+When we generate a neighbor schedule $S'$ from current schedule $S$, we calculate the cost difference:
+$$\Delta = c(S') - c(S)$$
+
+If $\Delta < 0$, the neighbor is better—we always accept it. If $\Delta > 0$, the neighbor is worse—we accept it with probability:
+$$P(\text{accept}) = e^{-\Delta / (k \cdot \tau(t))}$$
+
+where $k$ is a constant and $\tau(t)$ is the current temperature.
+
+Example: Current schedule has cost 200, neighbor has cost 250, temperature is 100, and $k=1$. Then $\Delta = 50$ and $P(\text{accept}) = e^{-0.5} \approx 0.606$ (60\% chance). This probability decreases as temperature drops.
+
+Our implementation guarantees that hard constraints are never violated by validating each neighbor during generation, ensuring only valid neighbors are considered.
+\end{document}

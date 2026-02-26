@@ -1,0 +1,258 @@
+\documentclass[10pt]{beamer}
+
+\usetheme{Madrid}
+\usefonttheme{professionalfonts}
+\setbeamertemplate{footline}[frame number]
+\setbeamercovered{transparent}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{xcolor}
+\renewcommand{\algorithmiccomment}[1]{\hfill$\triangleright$\textcolor{WildStrawberry}{#1}}
+\usepackage{float}
+
+\begin{document}
+
+\title{Graphs}
+\author{Polina Evgrafova,Catalin Viscun}
+\date{November 12, 2025}
+
+\begin{frame}
+    \maketitle
+\end{frame}
+
+% ------------------------------------------------------------------------------------------------
+% Frame Separator
+% ------------------------------------------------------------------------------------------------
+
+\section{Introduction}
+\begin{frame}{Introduction}
+  \begin{itemize}
+    \item Network flow models
+    \item Graph coloring
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Network flow models basics}
+    \small
+
+\begin{columns}[T, totalwidth=\textwidth]
+
+    \column{0.55\textwidth}
+    \textbf{Mathematical formulation:}
+    \[
+        \min \sum_{j=1}^{m} c_j x_j
+    \]
+    \[
+        \text{s.t. } \quad A x = b, \quad l \leq x \leq u
+    \]
+    \vspace{0.4em}
+    \begin{itemize}
+        \item $A_{n \times m}$ — vertex–edge incidence matrix,
+        \item $b_{n \times 1}$ — vector of supplies,
+        \item $u_{1 \times m}$ and $l_{1 \times m}$ — capacity and lower-bound vectors,
+        \item $x$ — the sought vector of active (used) edges.
+        \item $c_j$ — the cost of a certain used edge
+    \end{itemize}
+
+   
+    \column{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth, height=0.9\textheight, keepaspectratio]{optimization2/net.drawio.png}
+\end{columns}
+\end{frame}
+\begin{frame}{Algorithm Workflow}
+
+\small
+
+\begin{enumerate}
+    \item Based on the collected constraints, network flow graphs are constructed to represent possible allocations and dependencies.
+    \item For each network, a solution is found; this solution may affect previously built graphs, which were constructed without considering the newly obtained information.
+    \item The combination (sum) of all these individual network solutions represents the final schedule.  
+    In case no feasible global solution is found, conflicts must be identified (a relatively inefficient process) and resolved manually or at the teacher-assignment level.
+\end{enumerate}
+
+\end{frame}
+
+
+
+\begin{frame}{To-Dos and Method Limitations}
+
+\small
+
+
+
+\begin{itemize}
+    \item Absence of backtracking — a found solution may be unsatisfactory, or the constructed matrices must be dynamically updated after reserving a time slot for a class.
+    \item Separation of the \textit{time–teacher} and \textit{class–room} mappings requires:
+    \begin{itemize}
+        \item either combining the network flow model with another scheduling approach,
+        \item or developing a unified model capable of handling both spatial and temporal allocations.
+    \end{itemize}
+    \item Dynamic updating of matrices during scheduling should be explored to improve adaptability and convergence.
+    \item Integration of teacher–time and class–room scheduling into a single optimization framework remains an open task.
+    \item Scheduling for each individual class is a relatively simple subproblem — efficient algorithms exist that are polynomial in the number of edges and vertices.
+    \item Taking into account additional hard constrains, such as the maximum number of students in a classroom, will also require either the use of a separate method or a change in the approach to the described
+\end{itemize}
+
+\end{frame}
+
+% ------------------------------------------------------------------------------------------------
+% GRAPH COLORING SECTION
+% ------------------------------------------------------------------------------------------------
+
+\section{Graph Coloring Basics}
+
+\begin{frame}{Fundamental Idea of Graph Coloring}
+    \small
+    \begin{itemize}
+        \item The goal of graph coloring is to assign a color to every vertex of a graph such that no two adjacent vertices share the same color.
+        \item The smallest number of colors required to achieve this is called the \textbf{chromatic number} $\chi(G)$.
+        \item This concept models scheduling and allocation problems where certain entities cannot occur simultaneously.
+        \item In timetabling, each color represents a \textbf{time slot}: two connected vertices cannot occur in the same slot.
+        \item Coloring makes conflicts explicit and allows systematic, algorithmic optimization.
+    \end{itemize}
+
+    \vspace{1em}
+    \textbf{Formal Definition:}
+    \[
+        c: V(G) \rightarrow \{1, 2, \dots, k\} \quad \text{such that} \quad (u,v) \in E(G) \Rightarrow c(u) \neq c(v)
+    \]
+\end{frame}
+
+\begin{frame}{Algorithmic Principle}
+    \small
+    \begin{itemize}
+        \item The problem is \textbf{NP-hard}: no known polynomial-time algorithm guarantees finding the minimal number of colors.
+        \item In practice, heuristic or approximate algorithms are used to produce feasible results within reasonable time.
+        \item Simple heuristic: \textbf{Greedy Coloring}
+        \begin{itemize}
+            \item Vertices are ordered according to a criterion (e.g., vertex degree).
+            \item Each vertex receives the smallest possible color not used by its neighbors.
+        \end{itemize}
+        \item Improved heuristic: \textbf{DSATUR} (Degree of Saturation), prioritizing vertices with the highest diversity of neighboring colors.
+        \item Exact methods such as \textbf{Backtracking} or \textbf{Branch \& Bound} exist but scale exponentially.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Mathematical Formulation (ILP)}
+    \small
+    \[
+        x_{ij} =
+        \begin{cases}
+            1 & \text{if vertex } i \text{ receives color } j \\
+            0 & \text{otherwise}
+        \end{cases}
+    \]
+    Constraints:
+    \[
+        \sum_j x_{ij} = 1 \quad \forall i
+    \]
+    \[
+        x_{ij} + x_{kj} \le 1 \quad \forall (i,k) \in E(G)
+    \]
+    Objective:
+    \[
+        \min \sum_j y_j \quad \text{with } y_j \ge x_{ij}
+    \]
+
+    \vspace{0.5em}
+    \begin{itemize}
+        \item This ILP formulation expresses graph coloring as a linear optimization problem.
+        \item It is widely used in timetable generation since it integrates easily with additional constraints such as rooms, teacher availability, and course capacities.
+    \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------------------------------------------
+% SPECIAL CASES
+% ------------------------------------------------------------------------------------------------
+
+\section{Special Cases of Graph Coloring}
+
+\begin{frame}{Vertex Coloring}
+    \small
+    \begin{itemize}
+        \item The classical and most fundamental type of graph coloring.
+        \item Vertices represent entities (e.g., courses or exams), and edges represent conflicts between them.
+        \item Colors correspond to time slots such that no adjacent vertices occur simultaneously.
+        \item Used in timetabling to determine the minimal number of required time slots.
+        \item Can be easily extended with resource and availability constraints.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Edge Coloring}
+    \small
+    \begin{itemize}
+        \item In edge coloring, \textbf{edges} rather than vertices are assigned colors.
+        \item Two edges sharing the same vertex cannot have the same color.
+        \item Colors represent time slots, while vertices represent shared resources (e.g., rooms, teachers).
+        \item Ensures that no resource is double-booked within a given slot.
+        \item Useful in models emphasizing resource allocation and conflict avoidance.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{List Coloring}
+    \small
+    \begin{itemize}
+        \item Each vertex has an individual set (list) of allowed colors.
+        \item Represents real-world restrictions or preferences, e.g.:
+        \begin{itemize}
+            \item A teacher is only available on specific days.
+            \item A classroom can only be used during defined hours.
+        \end{itemize}
+        \item The objective is to find a valid coloring where every vertex uses a color from its list.
+        \item Extends standard coloring to incorporate practical constraints.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Multi-Coloring}
+    \small
+    \begin{itemize}
+        \item Each vertex is assigned multiple colors instead of one.
+        \item Models entities that must occur multiple times within a schedule (e.g., three weekly lectures).
+        \item The condition remains: adjacent vertices cannot share any color.
+        \item Suitable for multi-session courses or repeating events.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Weighted and Dynamic Coloring}
+    \small
+    \textbf{Weighted Coloring}
+    \begin{itemize}
+        \item Conflicts or preferences are assigned weights.
+        \item The goal is to minimize total penalties rather than avoid all conflicts strictly.
+        \item Example: an undesirable overlap has a small penalty, while a forbidden conflict has a high one.
+    \end{itemize}
+
+    \vspace{0.5em}
+    \textbf{Dynamic Coloring}
+    \begin{itemize}
+        \item Used for scenarios where the graph changes over time (e.g., new courses, updated room assignments).
+        \item Objective: adjust the existing coloring with minimal modifications.
+        \item Important in adaptive or incremental scheduling systems.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Hypergraph Coloring}
+    \small
+    \begin{itemize}
+        \item Extension to \textbf{hypergraphs}, where edges (called hyperedges) connect more than two vertices.
+        \item A hyperedge can represent all courses that share the same room or group of students.
+        \item Coloring ensures that no two vertices within the same hyperedge have identical colors.
+        \item Applied when dependencies are not purely pairwise, such as team teaching or shared-group sessions.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Conclusion}
+    \small
+    \begin{itemize}
+        \item Graph coloring is the foundational concept for graph-based timetabling and scheduling.
+        \item All variants (Vertex, Edge, List, Multi, Weighted, Hypergraph Coloring) extend the basic model with real-world constraints.
+        \item Effective because conflicts are explicitly represented and solvable through algorithmic methods.
+        \item For medium-sized instances, heuristic methods yield conflict-free timetables within seconds or minutes.
+        \item Large-scale problems often combine graph coloring with constraint programming or linear optimization frameworks.
+    \end{itemize}
+\end{frame}
+
+
+\end{document}

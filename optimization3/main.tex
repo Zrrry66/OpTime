@@ -1,0 +1,118 @@
+\documentclass[10pt]{beamer}
+
+\usetheme{Madrid}
+\usefonttheme{professionalfonts}
+\setbeamertemplate{footline}[frame number]
+\setbeamercovered{transparent}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{xcolor}
+\renewcommand{\algorithmiccomment}[1]{\hfill$\triangleright$\textcolor{WildStrawberry}{#1}}
+\usepackage{float}
+
+\begin{document}
+
+\title{Gurobi}
+\author{Polina Evgrafova,Catalin Viscun}
+\date{November 18, 2025}
+
+\begin{frame}
+    \maketitle
+\end{frame}
+\begin{frame}{About a license}
+    \begin{enumerate}\Large\textbf{How to install gurobi}\normalsize
+        \item Create an academic account on a official site, you'll need to type an institution by yourself.
+        \item On the "My account" page choose subpage "Licenses" and request "Named-User Academic"
+        \item For python use:
+        \\ \texttt{pip install gurobipy}
+        \\ \texttt{grbgetkey key-you'll-get-after-obtaining-a-license}
+        \item For the purpose of wide usage of a optimization application we should probably use a "Educational Institution Site" license
+    \end{enumerate}
+    
+\end{frame}
+
+
+
+\begin{frame}{Heuristics Overview}
+    \begin{itemize}\Large\textbf{What heuristics achieve}\normalsize
+        \item Provide good feasible solutions \textbf{without guaranteeing optimality}
+        \item \textbf{Reduce} computation time for large or hard MIP instances
+        \item \textbf{Improve} lower bounds via feasible incumbents
+        \item Allow \textbf{hybrid} workflows: exact MILP + heuristic search
+    \end{itemize}
+
+    \bigskip
+    \begin{itemize}\Large\textbf{Gurobi's role}\normalsize
+        \item Gurobi implements a suite of primal heuristics automatically
+        \item Heuristics can be strengthened through solver parameters
+        \item \textbf{Custom heuristics} can be executed by modifying variables, fixing subsets, or adding constraints
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Built-in Heuristics}
+    \begin{itemize}\Large\textbf{Frequently applied primal heuristics}\normalsize
+        \item \textbf{Feasibility Pump:} rapidly constructs first feasible solutions
+        \item \textbf{RINS:} neighborhood search based on LP relaxation and incumbent
+        \item \textbf{Diving Heuristics:} progressively fix variables based on LP values
+        \item \textbf{Local Search:} improvement steps on incumbent solutions
+        \item \textbf{Rounding:} simple rounding from LP relaxation
+        \item \textbf{MIP Polishing:} solution improvement in the final phase
+    \end{itemize}
+
+    \bigskip
+    \begin{itemize}\Large\textbf{Benefits}\normalsize
+        \item Strong feasible solutions early in the search
+        \item Better MIP gap reduction
+        \item Reduced branch-and-bound tree growth
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Custom Heuristics}
+    \Large\textbf{Strategies that integrate well with Gurobi}\normalsize
+    \begin{itemize}
+        \item \textbf{LP Rounding:} solve LP relaxation and round fractional values
+        \item \textbf{Relax-and-Fix:} iteratively fix subsets of variables
+        \item \textbf{Fix-and-Dive:} fix easy variables first and dive into solutions
+        \item \textbf{Local Branching:} explore solutions within a defined Hamming distance
+        \item \textbf{Large Neighborhood Search:} fix a neighborhood and re-optimise
+    \end{itemize}
+
+    \bigskip
+    \begin{enumerate}\Large\textbf{Workflow}\normalsize
+        \item Construct relaxed or reduced subproblem
+        \item Solve subproblem with Gurobi (fast exact solver)
+        \item Extract feasible solution and use as warm start
+        \item Repeat to explore new neighborhoods
+    \end{enumerate}
+
+    \bigskip
+    \textbf{Reference implementation:} \url{https://www.gurobi.com/documentation/}
+\end{frame}
+
+\begin{frame}{Linear integer programming}
+    \begin{itemize}\Large\textbf{What are we able to do}\normalsize
+        \item Introduce variables for constrains and auxiliary variables for computing
+        \item Add \textbf{hard constrains} using \texttt{addConstrs} for simple constrains and further \texttt{addConstrs-} for composite ones
+        \item Add \textbf{soft constrains} using by introducing an additional variable equal to 1 when we allow to break a constraint
+        \item Introduce a \textbf{minimisation} function by \texttt{setObjective}
+        \item Compute parallel
+        \item Set time limitation
+    \end{itemize}
+    \bigskip 
+    \textbf{Where to find more:} \url{https://docs.gurobi.com/projects/optimizer/en/current/reference/python/model.html}
+\end{frame}
+
+\begin{frame}{Linear integer programming}
+\begin{itemize}\Large\textbf{What we need to implement}\normalsize
+    \item Model constrains
+    \item A way to collect and store constrains
+    \item A way to correlate weights with soft constrains
+    \item Tests to determine well suited weights
+\end{itemize}
+    
+\end{frame}
+
+
+        
+\end{document}
