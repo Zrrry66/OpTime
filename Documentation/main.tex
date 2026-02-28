@@ -1,5 +1,4 @@
 \documentclass[11pt,a4paper]{article}
-\usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage{graphicx}
 \usepackage{amsmath}
@@ -14,6 +13,14 @@
 \usepackage{setspace}
 \onehalfspacing
 \usepackage{parskip}
+\setlength{\marginparwidth}{2cm}
+\usepackage{todonotes}
+%\usepackage[disable]{todonotes}
+\usepackage{csquotes}
+\usepackage[style=numeric, backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\usepackage[export]{adjustbox}
+\usepackage{xcolor}
 
 % find all images in this folder
 \graphicspath{ {./img/} }
@@ -66,16 +73,16 @@ The three parts work together in a user-driven process: the frontend collects al
 The front end serves as the central interface of the OpTime system, acting as the bridge between administrators and the two backend solvers. All user inputs, including lecturer availability constraints, course configurations and room capacities etc., are entered here and translated into structured data for the optimization engines. Conversely, solver outputs from both Gurobi and Simulated Annealing are parsed and rendered as readable and interactive timetables.
 \subsection{UI/UX Design \& User Experience}
 \subsubsection{Information Hierarchy and Navigation}
-The OpTime application follows a Dashboard-Centric layout designed for maximum administrative efficiency. The visual architecture is structured to ensure that critical navigation and data operations are always within one click of the user's focus (see Figure \ref{fig:dashboard}).
+OpTime prioritizes administrative efficiency by using a dashboard-centric interface. This layout minimizes task friction, ensuring that core navigation and data tools remain accessible from any view (see Figure \ref{fig:dashboard}).
 \begin{itemize}
-    \item \textbf{Global Navigation}: The left-hand sidebar serves as the primary router, allowing instant switching between \textbf{Lecturers}, \textbf{Courses}, and \textbf{Rooms}. This persistent placement ensures that the user never loses their sense of location within the data hierarchy.
-    \item \textbf{Version Control (Saved Schedules)}: A standout feature is the \textbf{Saved Schedules} repository in the sidebar. It tracks historical schedule generations with precise timestamps (e.g., \textit{Schedule 16:08:52}). This allows administrators to experiment with different constraints and revert to previous ``optimal'' states via the \textbf{Restore Data} button.
-    \item \textbf{Data Grid System}: As demonstrated in the Lecturer and Course views, the system utilizes a high-density table format. Each row features \textbf{Status Badges} (e.g.,``Active'' in mint green) to provide immediate visual confirmation of which entities are currently included in the solver's scope.
+    \item \textbf{Global Navigation}: The left-hand sidebar acts as a unified navigation hub, providing direct access to Lecturers, Courses, and Rooms. This design maintains user orientation across the platform's data hierarchy.
+    \item \textbf{Version Control}: The ``Saved Schedules'' repository allows administrators to archive and compare previous generated timetables. Each entry is auto-stamped to allow users to test different constraints and roll back to an ``optimal'' configuration via the Restore Data function.
+    \item \textbf{Data Grid System}: The system employs high-density tables for efficient data management. Instead of permanent deletion, a status toggle (``Active'' vs. ``Inactive'') allows administrators to temporarily exclude specific entries from the solver's scope. This ``soft disable'' approach ensures that historical data remains intact for future use without cluttering the current optimization process.
 \end{itemize}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{Documentation/img/ui_main_dashboard.png}
+    \includegraphics[width=0.8\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_main_dashboard.png}
     \caption{The OpTime main control panel, illustrating the side-panel version control and the responsive data management table.}
     \label{fig:dashboard}
 \end{figure}
@@ -97,7 +104,7 @@ These categories (Red/Yellow) correspond directly to the hard and soft constrain
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{Documentation/img/ui_availability_matrix.png}
+    \includegraphics[width=0.8\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_availability_matrix.png}
     \caption{Detailed view of the Lecturer Availability Matrix, showing the three-tier coloring system for hard and soft constraints.}
     \label{fig:matrix}
 \end{figure}
@@ -111,7 +118,7 @@ Data entry for complex entities is managed through \textbf{Dynamic Overlay Modal
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{Documentation/img/ui_add_course_modal.png}
+    \includegraphics[width=0.8\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_add_course1.png}
     \caption{The "Add Course" modal demonstrating multi-select lecturer logic and curriculum allocation fields.}
     \label{fig:course_modal}
 \end{figure}
@@ -125,7 +132,7 @@ The final product of the OpTime system is rendered in a \textbf{Dynamic Weekly P
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{Documentation/img/ui_generated_timetable.png}
+    \includegraphics[width=0.8\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_generated_timetable.png}
     \caption{The final generated timetable, showcasing the adaptive 2D grid and the diagnostic reporting triggers.}
     \label{fig:timetable}
 \end{figure}
@@ -185,7 +192,7 @@ Our front-end solution successfully bridges the gap between complex algorithmic 
 % ==========================================
 
 \section{Part II: Exact Optimization via Gurobi}
-While the Simulated Annealing module provides a fast, stochastic approach to timetable optimization, the Gurobi module takes a complementary strategy: it formulates the scheduling problem as an Integer Linear Program (ILP) and solves it to provable optimality. Integer Linear Programming is a mathematical framework in which the goal is to minimize (or maximize) a linear objective function subject to a set of linear constraints, where some or all decision variables are restricted to integer values. For binary scheduling decisions — such as whether a course is assigned to a particular room, time slot, and lecturer — this framework is a natural fit.
+While the Simulated Annealing module provides a fast, stochastic approach to timetable optimization, the Gurobi module takes a complementary strategy: it formulates the scheduling problem as an Integer Linear Program (ILP) and solves it to provable optimality. Integer Linear Programming is a mathematical framework in which the goal is to minimize (or maximize) a linear objective function subject to a set of linear constraints, where some or all decision variables are restricted to integer values. For binary scheduling decisions — such as whether a course is assigned to a particular room, time slot, and lecturer — this framework is a natural fit\cite{Talmor2024OptimizingAT}.
 
 Gurobi is a state-of-the-art commercial solver for mathematical optimization problems, widely used in both industry and academic research. Compared to open-source alternatives such as GLPK or CBC, Gurobi offers significantly faster solve times on large ILP instances, a clean Python API (gurobipy), and an academic license that makes it accessible for university projects. The key trade-off between the two approaches in OpTime is as follows: Gurobi guarantees finding the globally optimal schedule but it takes much longer as the problem size grows; Simulated Annealing handles large tasks much better but it doesn't guarantee a perfect result. Together, they give users a practical choice based on their specific needs.
 \subsection{Problem Formulation}
@@ -332,4 +339,6 @@ The workflow: Generate, Adjust manually, Improve keeps the process transparent a
 % For future improvment, please check and feel free to add anything I might have missed.
 
 For future work, the SA algorithm could be tuned further to get better results faster. The Gurobi model could also be tested on larger datasets beyond the Faculty of Media. On the frontend side, features like importing data directly from university systems would make the tool much more practical in a real administrative setting.
+
+\printbibliography
 \end{document}
