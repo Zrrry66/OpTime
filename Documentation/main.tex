@@ -21,6 +21,7 @@
 \addbibresource{refs.bib}
 \usepackage[export]{adjustbox}
 \usepackage{xcolor}
+\usepackage{subcaption}
 
 % find all images in this folder
 \graphicspath{ {./img/} }
@@ -88,7 +89,8 @@ OpTime prioritizes administrative efficiency by using a dashboard-centric interf
 \end{figure}
 
 \subsubsection{The Multi-Dimensional Availability Matrix}
-To address the inherent complexity of faculty time preferences, we developed an \textbf{Interactive Availability Matrix} (see Figure \ref{fig:matrix}). This component acts as the primary interface for translating human availability into the mathematical constraints used by the solvers.
+\todo[inline]{2.28}
+To address the inherent complexity of faculty time preferences, we developed an \textbf{Interactive Availability Matrix} (see Figure \ref{fig:matrix_l}). This component acts as the primary interface for translating human availability into the mathematical constraints used by the solvers.
 These categories (Red/Yellow) correspond directly to the hard and soft constraint weights in the optimization engine.
 
 \begin{itemize}
@@ -102,12 +104,25 @@ These categories (Red/Yellow) correspond directly to the hard and soft constrain
     \item \textbf{Efficiency Overlays}: The modal includes "Set to Available" and "Reset Schedule" batch actions, significantly reducing the manual labor required to configure a full-week schedule for 20+ lecturers.
 \end{itemize}
 
-\begin{figure}[H]
+\begin{figure}
     \centering
-    \includegraphics[width=0.8\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_availability_matrix.png}
-    \caption{Detailed view of the Lecturer Availability Matrix, showing the three-tier coloring system for hard and soft constraints.}
-    \label{fig:matrix}
+    \begin{subfigure}[b]{0.8\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_availability_lecturer.png}
+        \caption{Available time slots from the lecturer's perspective.}
+        \label{fig:matrix_l}
+    \end{subfigure}
+
+    \vspace{2em}
+
+    \begin{subfigure}[b]{0.8\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_availability_course.png}
+        \caption{Available time slots for a specific course.}
+        \label{fig:matrix_c}
+    \end{subfigure}
 \end{figure}
+
 
 \subsubsection{Contextual Workflow via Dynamic Modals}
 Data entry for complex entities is managed through \textbf{Dynamic Overlay Modals} (see Figure \ref{fig:course_modal}), which maintain the user's place in the main list while providing a focused environment for input.
@@ -116,11 +131,24 @@ Data entry for complex entities is managed through \textbf{Dynamic Overlay Modal
     \item \textbf{Real-Time Validation}: The UI provides instant browser-level feedback to ensure data integrity before the information is committed to the database.
 \end{itemize}
 
-\begin{figure}[H]
+\begin{figure}
     \centering
-    \includegraphics[width=0.8\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_add_course1.png}
-    \caption{The "Add Course" modal demonstrating multi-select lecturer logic and curriculum allocation fields.}
-    \label{fig:course_modal}
+    \begin{subfigure}[b]{0.8\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_add_course1.png}
+        \caption{Initial view of the modal.}
+        \label{fig:course_modal}
+    \end{subfigure}
+
+    \vspace{2em}
+
+    \begin{subfigure}[b]{0.8\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_add_course2.png}
+        \caption{Scrolled view showing remaining fields.}
+        \label{fig:course_modal2}
+    \end{subfigure}
+    \caption{The ``Add Cours'' modal interface (scrolled to display all fields).}
 \end{figure}
 
 \subsubsection{Output Visualization: The Generated Timetable}
