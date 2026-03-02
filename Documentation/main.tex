@@ -84,14 +84,15 @@ OpTime prioritizes administrative efficiency by using a dashboard-centric interf
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_main_dashboard.png}
-    \caption{The OpTime main control panel, illustrating the side-panel version control and the responsive data management table.}
+    \caption{OpTime dashboard: schedule versioning and data management.}
     \label{fig:dashboard}
 \end{figure}
 
-\subsubsection{The Multi-Dimensional Availability Matrix}
-\todo[inline]{2.28}
-To address the inherent complexity of faculty time preferences, we developed an \textbf{Interactive Availability Matrix} (see Figure \ref{fig:matrix_l}). This component acts as the primary interface for translating human availability into the mathematical constraints used by the solvers.
-These categories (Red/Yellow) correspond directly to the hard and soft constraint weights in the optimization engine.
+\subsubsection{The Interactive Availability Matrix}
+To bridge the gap between faculty preferences and the automated scheduler, we developed an intuitive Availability Matrix (see Figure \ref{fig:matrix}).
+Instead of asking users to fill out complex forms, we designed a 7-day visual grid divided into 90-minute blocks. While the interface primarily focuses on the standard academic window from 09:15 to 20:30, we also included a dedicated 07:30-09:00 slot to accommodate those rare early sessions or special departmental requirements that occasionally disrupt a normal schedule.
+
+The system uses a straightforward three-color code to define how the optimization engine should handle different time slots:
 
 \begin{itemize}
     \item \textbf{Grid-Based Selection}: The matrix covers a 7-day week with predefined 90-minute time slots (spanning from 07:30 to 20:30). Each cell is an interactive toggle.
@@ -109,7 +110,7 @@ These categories (Red/Yellow) correspond directly to the hard and soft constrain
     \begin{subfigure}[b]{0.8\textwidth}
         \centering
         \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_availability_lecturer.png}
-        \caption{Available time slots from the lecturer's perspective.}
+        \caption{Lecturer's view of availability and preferences.}
         \label{fig:matrix_l}
     \end{subfigure}
 
@@ -118,9 +119,11 @@ These categories (Red/Yellow) correspond directly to the hard and soft constrain
     \begin{subfigure}[b]{0.8\textwidth}
         \centering
         \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_availability_course.png}
-        \caption{Available time slots for a specific course.}
+        \caption{Course-specific time slot constraints.}
         \label{fig:matrix_c}
     \end{subfigure}
+    \caption{Visual representation of time slot availability and preferences.}
+    \label{fig:matrix}
 \end{figure}
 
 
