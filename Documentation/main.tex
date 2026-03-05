@@ -95,15 +95,12 @@ Instead of asking users to fill out complex forms, we designed a 7-day visual gr
 The system uses a straightforward three-color code to define how the optimization engine should handle different time slots:
 
 \begin{itemize}
-    \item \textbf{Grid-Based Selection}: The matrix covers a 7-day week with predefined 90-minute time slots (spanning from 07:30 to 20:30). Each cell is an interactive toggle.
-    \item \textbf{Semantic Constraint Categorization}: 
-        \begin{itemize}
-            \item \textbf{Mint Green (Available)}: Open slots which the solver is encouraged to use.
-            \item \textbf{Amber (Preferred - Soft)}: Indicates slots that the "Improve" algorithm should prioritize to maximize lecturer satisfaction.
-            \item \textbf{Coral Red (Unavailable)}: Represents hard constraints that the solver is strictly prohibited from occupying.
-        \end{itemize}
-    \item \textbf{Efficiency Overlays}: The modal includes "Set to Available" and "Reset Schedule" batch actions, significantly reducing the manual labor required to configure a full-week schedule for 20+ lecturers.
+    \item \textbf{Red (Unavailable)}: acts as a hard boundary. The solver will strictly avoid scheduling a course or a lecturer in these time slots.
+    \item \textbf{Yellow (Preferred)}: identifies the ``sweet spots'', where the interests of faculty, students, and the department overlap. These soft preferences serve as optimization targets, allowing the solver to refine the schedule by balancing faculty convenience, student learning rhythms, and departmental resource efficiency.
+    \item \textbf{Green (Available)}: serves as a critical fallback. If a preferred slot cannot be met due to scheduling conflicts, the system automatically uses these green areas to ensure every class is successfully placed and the final schedule remains valid.
 \end{itemize}
+
+The real breakthrough in this module, however, is the Smart Syncing mechanism designed to eliminate redundant work. In a large department, manually entering the same availability for five different courses is tedious and prone to mistakes. We solved this by unlocking the data flow between lecturers and their assigned classes. With the``Copy to Assigned Courses'' feature, a teacher’s general availability can be pushed to all their assigned classes in one click. Conversely, when setting up a specific course, the system can automatically pull the assigned teacher's schedule. This ensures that the data stays consistent across the entire platform, preventing the common error where a class is scheduled at a time the teacher is actually busy.
 
 \begin{figure}
     \centering
@@ -243,7 +240,7 @@ Gurobi is a state-of-the-art commercial solver for mathematical optimization pro
 % ==========================================
 
 \section{Part III: Heuristic Optimization via Simulated Annealing (SA)}
-% Added this introduction paragrapgh. changed the hierarchy of the titles. The rest remain the same. Maybe you could also add a conclusion paragrapgh
+% Added this introduction paragrapgh. changed the hierarchy of the titles. The rest remain the same. Maybe you could also add a conclusion paragrapgh, and add some references from the papers we have read.
 
 While the Gurobi solver guarantees the best possible schedule for smaller tasks, the Simulated Annealing (SA) module is a faster alternative for larger and more complex problems. SA doesn't guarantee a 'perfect' mathematical solution, but it quickly finds high-quality schedules—much faster than trying every possible combination. This makes it perfect for the real-time updates in the OpTime frontend.
 
