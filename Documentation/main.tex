@@ -67,6 +67,17 @@ The project is a web-based tool to automate this process for the Faculty of Medi
 
 The three parts work together in a user-driven process: the frontend collects all input data and sends it to the Gurobi solver to create a base schedule. Users can then manually adjust the results through the interface. After that, the Simulated Annealing module takes that version and improves it further. The final result is shown on the frontend, ready to be reviewed and exported. This document covers each component in detail.
 
+\section{Literature Review}
+Before we started building the OpTime System, our group analyzed 13 research papers to study the principles of various optimization algorithms and their practical applications in university timetabling. This research gave us a clear picture of the technical challenges and helped us decide which algorithms to use for our specific scheduling needs.
+
+\subsection{Problem Complexity and Constraints}
+The literature defines university timetabling as an NP-complete or NP-hard problem, meaning no efficient algorithm can find a perfect solution every time as the data size grows. To address this, we identified two categories of constraints:
+\begin{itemize}
+    \item \textbf{Hard Constraints}:
+    \item \textbf{Soft Constraints}:
+\end{itemize}
+
+
 % ==========================================
 % PART I: Front-end, UI/UX
 % ==========================================
@@ -123,7 +134,7 @@ The real breakthrough in this module, however, is the Smart Syncing mechanism de
     \label{fig:matrix}
 \end{figure}
 
-
+\todo[inline]{3.5}
 \subsubsection{Contextual Workflow via Dynamic Modals}
 Data entry for complex entities is managed through \textbf{Dynamic Overlay Modals} (see Figure \ref{fig:course_modal}), which maintain the user's place in the main list while providing a focused environment for input.
 \begin{itemize}
@@ -224,7 +235,12 @@ While the Simulated Annealing module provides a fast, stochastic approach to tim
 
 Gurobi is a state-of-the-art commercial solver for mathematical optimization problems, widely used in both industry and academic research. Compared to open-source alternatives such as GLPK or CBC, Gurobi offers significantly faster solve times on large ILP instances, a clean Python API (gurobipy), and an academic license that makes it accessible for university projects. The key trade-off between the two approaches in OpTime is as follows: Gurobi guarantees finding the globally optimal schedule but it takes much longer as the problem size grows; Simulated Annealing handles large tasks much better but it doesn't guarantee a perfect result. Together, they give users a practical choice based on their specific needs.
 \subsection{Problem Formulation}
+In order to solve the scheduling problem using the optimization software described above, it is necessary to construct a formal model that represents both the occurrence of a class session and the natural constraints imposed by the real-world environment in which such sessions take place. This representation must be expressed in a form that can be interpreted by a specific solver implementing a particular optimization algorithm.
+
+The process of constructing this model can be conceptually divided into four stages, each corresponding to one of the fundamental components of the final optimization formulation. The first stage defines the decision variables, which form the foundation upon which all subsequent components of the model are built. The second stage introduces hard constraints, which establish the feasible boundaries of the problem and enforce the essential rules that must always be satisfied.The third stage incorporates soft constraints. Unlike hard constraints, these conditions represent preferences rather than strict requirements. They allow the model to be adjusted and adapted according to practical considerations and user needs.Finally, the fourth stage defines the objective function to be minimized. This function aggregates penalties associated with violations of soft constraints and provides the optimization solver with a quantitative criterion for evaluating different feasible schedules.
+
 \subsubsection{Decision Variables}
+
 \subsubsection{Hard Constraints}
 \subsubsection{Soft Constraints}
 \subsubsection{Objective Function}
