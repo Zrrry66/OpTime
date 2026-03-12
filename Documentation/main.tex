@@ -73,9 +73,21 @@ Before we started building the OpTime System, our group analyzed 13 research pap
 \subsection{Problem Complexity and Constraints}
 The literature defines university timetabling as an NP-complete or NP-hard problem, meaning no efficient algorithm can find a perfect solution every time as the data size grows. To address this, we identified two categories of constraints:
 \begin{itemize}
-    \item \textbf{Hard Constraints}:
-    \item \textbf{Soft Constraints}:
+    \item \textbf{Hard Constraints}: These are non-negotiable rules that must be satisfied, such as ensuring no lecture or room is double-booked.
+    \item \textbf{Soft Constraints}: These are flexible preferences, like distributing the workload evenly throughout the week or respecting specific lecturer time slots.
 \end{itemize}
+
+\subsection{Algorithm Mechanisims and Applications}
+Our review focused on the mechanics of several optimization methods:
+\begin{itemize}
+    \item \textbf{Genetic Algorithms (GA)}: These use a biological evolution approach involving selection, crossover, and mutation. We found that Violated Directed Mutation (VDM) is particularly effective because it specifically targets and fixes genes that violate constraints rather than making random changes.
+    \item \textbf{Simulated Annealing (SA)}: This algorithm keeps track of a current solution and occasionally accepts ``worse'' moves as the system ``temperature'' decreases. This mechanism helps the solver jump out of local traps to find a better overall schedule. It is recognized in the literature as being ``simple to start'' while remaining effective for complex problems.
+    \item \textbf{Ant Colony Optimization (ACO) \& PSO}: ACO mimics ant behavior by using pheromones to find the best paths to a solution. When hybridized with Particle Swarm Optimization (PSO), the system can automatically tune its own parameters, making the search process more stable and successful.
+    \item \textbf{Fuzzy Logic}: Some models use fuzzy logic to handle uncertain human preferences, which helps in balancing conflicting soft constraints.
+\end{itemize}
+
+\subsection{Selection of Algorithms for OpTime}
+
 
 
 % ==========================================
