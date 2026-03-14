@@ -68,6 +68,7 @@ The project is a web-based tool to automate this process for the Faculty of Medi
 The three parts work together in a user-driven process: the frontend collects all input data and sends it to the Gurobi solver to create a base schedule. Users can then manually adjust the results through the interface. After that, the Simulated Annealing module takes that version and improves it further. The final result is shown on the frontend, ready to be reviewed and exported. This document covers each component in detail.
 
 \section{Literature Review}
+\todo[inline]{need to add citations}
 Before we started building the OpTime System, our group analyzed 13 research papers to study the principles of various optimization algorithms and their practical applications in university timetabling. This research gave us a clear picture of the technical challenges and helped us decide which algorithms to use for our specific scheduling needs.
 
 \subsection{Problem Complexity and Constraints}
@@ -87,8 +88,9 @@ Our review focused on the mechanics of several optimization methods:
 \end{itemize}
 
 \subsection{Selection of Algorithms for OpTime}
+These insights led us to adopt a dual-solver architecture. While Integer Programming (IP) models can provide optimal solutions for smaller datasets, they become computationally expensive as the problem scales. In an interactive environment, where administrators need to see the impact of their changes immediately, the long wait times of an exact solver are often impractical.
 
-
+We addressed these performance constraints by adopting a dual-solver architecture. We use Simulated Annealing for the drafting and real-time editing phases, as it provides the immediate feedback necessary for an interactive tool. This hybrid setup allows OpTime to stay fast and responsive at scale, while ensuring all results remain grounded in the formal logic of the IP-based model.
 
 % ==========================================
 % PART I: Front-end, UI/UX
@@ -97,7 +99,7 @@ Our review focused on the mechanics of several optimization methods:
 The front end serves as the central interface of the OpTime system, acting as the bridge between administrators and the two backend solvers. All user inputs, including lecturer availability constraints, course configurations and room capacities etc., are entered here and translated into structured data for the optimization engines. Conversely, solver outputs from both Gurobi and Simulated Annealing are parsed and rendered as readable and interactive timetables.
 \subsection{UI/UX Design \& User Experience}
 \subsubsection{Information Hierarchy and Navigation}
-OpTime prioritizes administrative efficiency by using a dashboard-centric interface. This layout minimizes task friction, ensuring that core navigation and data tools remain accessible from any view (see Figure \ref{fig:dashboard}).
+OpTime prioritizes administrative efficiency by using a dashboard-centric interface. This layout minimizes task friction, ensuring that core navigation and data tools remain accessible from any view (Figure \ref{fig:dashboard}).
 \begin{itemize}
     \item \textbf{Global Navigation}: The left-hand sidebar acts as a unified navigation hub, providing direct access to Lecturers, Courses, and Rooms. This design maintains user orientation across the platform's data hierarchy.
     \item \textbf{Version Control}: The ``Saved Schedules'' repository allows administrators to archive and compare previous generated timetables. Each entry is auto-stamped to allow users to test different constraints and roll back to an ``optimal'' configuration via the Restore Data function.
@@ -112,8 +114,8 @@ OpTime prioritizes administrative efficiency by using a dashboard-centric interf
 \end{figure}
 
 \subsubsection{The Interactive Availability Matrix}
-To bridge the gap between faculty preferences and the automated scheduler, we developed an intuitive Availability Matrix (see Figure \ref{fig:matrix}).
-Instead of asking users to fill out complex forms, we designed a 7-day visual grid divided into 90-minute blocks. While the interface primarily focuses on the standard academic window from 09:15 to 20:30, we also included a dedicated 07:30-09:00 slot to accommodate those rare early sessions or special departmental requirements that occasionally disrupt a normal schedule.
+To bridge the gap between faculty preferences and the automated scheduler, we developed an intuitive Availability Matrix (Figure \ref{fig:matrix}).
+Instead of asking users to fill out complex forms, we designed a 7-day visual grid divided into 90-minute blocks. The interface covers the core academic window (09:15–18:30) while also providing extended slots at 07:30–09:00 and 19:00–20:30. These additions allow the system to handle early or late sessions required by specific departments.
 
 The system uses a straightforward three-color code to define how the optimization engine should handle different time slots:
 
@@ -146,12 +148,11 @@ The real breakthrough in this module, however, is the Smart Syncing mechanism de
     \label{fig:matrix}
 \end{figure}
 
-\todo[inline]{3.5}
-\subsubsection{Contextual Workflow via Dynamic Modals}
-Data entry for complex entities is managed through \textbf{Dynamic Overlay Modals} (see Figure \ref{fig:course_modal}), which maintain the user's place in the main list while providing a focused environment for input.
+\subsubsection{Data Entry and Entity Management}
+To maintain a continuous workflow, the system handles data entry for lecturers, courses, and rooms through modal windows (Figure \ref{fig:course_modal}). This design allows users to add or edit information without navigating away from the main list, reducing unnecessary page reloads.
 \begin{itemize}
-    \item \textbf{Intelligent Field Linking}: The "Add Course" modal allows for multi-lecturer selection and curriculum allocations (e.g., "Mandatory" vs. "Elective"). This ensures that the front-end captures all parameters required by the Gurobi and SA solvers.
-    \item \textbf{Real-Time Validation}: The UI provides instant browser-level feedback to ensure data integrity before the information is committed to the database.
+    \item \textbf{Entity-Specific Data Entry}: The system provides specific modals for managing lecturers, courses, and rooms. While entries for lecturers and rooms focus on basic attriubtes such as faculty and capacity, the ``Add Course'' interface handles more complex configurations. It allows users to link multiple lecturers to a single course and define curriculum requirements (e.g., mandatory vs. elective). This design ensures that the front-end captures all the parameters required by the Gurobi and SA solvers.
+    \item \textbf{Input Validation and Integrity}: To prevent invalide data from reaching the optimization engine, the UI performs real-time validation. It checks for formatting errors and missing fields before any data is committed to the database, ensuring that the solver always oprates on a consistent and high-quality dtaset.
 \end{itemize}
 
 \begin{figure}
@@ -160,7 +161,7 @@ Data entry for complex entities is managed through \textbf{Dynamic Overlay Modal
         \centering
         \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_add_course1.png}
         \caption{Initial view of the modal.}
-        \label{fig:course_modal}
+        \label{fig:course_modal1}
     \end{subfigure}
 
     \vspace{2em}
@@ -172,19 +173,45 @@ Data entry for complex entities is managed through \textbf{Dynamic Overlay Modal
         \label{fig:course_modal2}
     \end{subfigure}
     \caption{The ``Add Cours'' modal interface (scrolled to display all fields).}
+    \label{fig:course_modal}
 \end{figure}
 
-\subsubsection{Output Visualization: The Generated Timetable}
-The final product of the OpTime system is rendered in a \textbf{Dynamic Weekly Planner} format (see Figure \ref{fig:timetable}), transforming raw solver data into a human-readable schedule.
+\subsubsection{Visualization and Interaction of Generated Timetables}
+Once the optimization is complete, the system converts raw solver data into an intuitive weekly planner (Figure \ref{fig:timetable}) with the following features:
 \begin{itemize}
-    \item \textbf{Contextual Course Cards}: Each session card is automatically color-coded and displays essential metadata: Course Name, Lecturer, and Room Code.
-    \item \textbf{The Diagnostic Gateway}: A high-visibility \textbf{"View Report"} button (Red) provides access to a detailed modal that categorizes any soft conflicts, allowing for transparent "Human-in-the-loop" decision making.
+    \item \textbf{Layout and Information Display}: The generated timetable uses a standard weekly grid, as shown in Figure\ref{fig:timetable_view}. Each session is rendered as a color-coded card displaying essential metadata: the course name, lecturer, and room code. This allows users to grasp the overall schedule at a glance.
+    \item \textbf{Manual Adjustments and Visual Feedback}: The system supports a drag-and-drop interface for manual fine-tuning (Figure\ref{fig:timetable_adjust}). To prevent users from inadvertently breaking the scheduling logic, the UI provides real-time visual cues: valid time slots are highlighted in green, while prohibited slots (due to lecturer or room conflicts) are marked in red. This feedback loop guides users to make adjustments that remain within the bounds of the system's constraints.
+    \item \textbf{Conflict Reporting}: A ``View Report'' button allows users to access a detailed diagnostic modal (Figure\ref{fig:timetable_report}). The report categorizes findings into ``Blocking Issues'' (hard constraint violations) and ``Suggestions'' (soft constraint optimizations, such as inefficient room usage). This report helps users review the solver's logic and identify exactly where manual adjustments are needed.
 \end{itemize}
 
-\begin{figure}[H]
+\begin{figure}
     \centering
-    \includegraphics[width=0.8\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_generated_timetable.png}
-    \caption{The final generated timetable, showcasing the adaptive 2D grid and the diagnostic reporting triggers.}
+    \begin{subfigure}[b]{0.8\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_generated_timetable.png}
+        \caption{Generated weekly timetable.}
+        \label{fig:timetable_view}
+    \end{subfigure}
+
+    \vspace{1em}
+
+    \begin{subfigure}[b]{0.8\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_timetable_adjust.png}
+        \caption{Drag-and-drop with conflict highlighting.}
+        \label{fig:timetable_adjust}
+    \end{subfigure}
+
+    \vspace{1em}
+
+    \begin{subfigure}[b]{0.8\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_timetable_report.jpeg}
+        \caption{Constraint violation report.}
+        \label{fig:timetable_report}
+    \end{subfigure}
+    
+    \caption{Timetable viewing, adjustment, and reporting workflow.}
     \label{fig:timetable}
 \end{figure}
 
