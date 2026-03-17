@@ -68,11 +68,11 @@ The project is a web-based tool to automate this process for the Faculty of Medi
 The three parts work together in a user-driven process: the frontend collects all input data and sends it to the Gurobi solver to create a base schedule. Users can then manually adjust the results through the interface. After that, the Simulated Annealing module takes that version and improves it further. The final result is shown on the frontend, ready to be reviewed and exported. This document covers each component in detail.
 
 \section{Literature Review}
-\todo[inline]{need to add citations}
+\todo[inline]{please check the citations and add them if necessary}
 Before we started building the OpTime System, our group analyzed 13 research papers to study the principles of various optimization algorithms and their practical applications in university timetabling. This research gave us a clear picture of the technical challenges and helped us decide which algorithms to use for our specific scheduling needs.
 
 \subsection{Problem Complexity and Constraints}
-The literature defines university timetabling as an NP-complete or NP-hard problem, meaning no efficient algorithm can find a perfect solution every time as the data size grows. To address this, we identified two categories of constraints:
+The literature defines university timetabling as an NP-complete or NP-hard problem, meaning no efficient algorithm can find a perfect solution every time as the data size grows \cite{burke1997automated, schaerf1999survey}. To address this, we identified two categories of constraints \cite{burke1997automated}:
 \begin{itemize}
     \item \textbf{Hard Constraints}: These are non-negotiable rules that must be satisfied, such as ensuring no lecture or room is double-booked.
     \item \textbf{Soft Constraints}: These are flexible preferences, like distributing the workload evenly throughout the week or respecting specific lecturer time slots.
@@ -81,16 +81,16 @@ The literature defines university timetabling as an NP-complete or NP-hard probl
 \subsection{Algorithm Mechanisims and Applications}
 Our review focused on the mechanics of several optimization methods:
 \begin{itemize}
-    \item \textbf{Genetic Algorithms (GA)}: These use a biological evolution approach involving selection, crossover, and mutation. We found that Violated Directed Mutation (VDM) is particularly effective because it specifically targets and fixes genes that violate constraints rather than making random changes.
-    \item \textbf{Simulated Annealing (SA)}: This algorithm keeps track of a current solution and occasionally accepts ``worse'' moves as the system ``temperature'' decreases. This mechanism helps the solver jump out of local traps to find a better overall schedule. It is recognized in the literature as being ``simple to start'' while remaining effective for complex problems.
-    \item \textbf{Ant Colony Optimization (ACO) \& PSO}: ACO mimics ant behavior by using pheromones to find the best paths to a solution. When hybridized with Particle Swarm Optimization (PSO), the system can automatically tune its own parameters, making the search process more stable and successful.
-    \item \textbf{Fuzzy Logic}: Some models use fuzzy logic to handle uncertain human preferences, which helps in balancing conflicting soft constraints.
+    \item \textbf{Genetic Algorithms (GA)}: These use a biological evolution approach involving selection, crossover, and mutation. We found that Violated Directed Mutation (VDM) is particularly effective because it specifically targets and fixes genes that violate constraints rather than making random changes \cite{Kristiadi2019}.
+    \item \textbf{Simulated Annealing (SA)}: This algorithm keeps track of a current solution and occasionally accepts ``worse'' moves as the system ``temperature'' decreases. This mechanism helps the solver escape local optima to find a better overall schedule.
+    \item \textbf{Ant Colony Optimization (ACO) \& PSO}: ACO mimics ant behavior by using pheromones to find the best paths to a solution. When hybridized with Particle Swarm Optimization (PSO), the system can automatically tune its own parameters, making the search process more stable and successful \cite{Yunita2018}.
+    \item \textbf{Fuzzy Logic}: Some models use fuzzy logic to handle uncertain human preferences, which helps in balancing conflicting soft constraints \cite{robinson2025adaptive}.
 \end{itemize}
 
 \subsection{Selection of Algorithms for OpTime}
-These insights led us to adopt a dual-solver architecture. While Integer Programming (IP) models can provide optimal solutions for smaller datasets, they become computationally expensive as the problem scales. In an interactive environment, where administrators need to see the impact of their changes immediately, the long wait times of an exact solver are often impractical.
+These insights led us to adopt a dual-solver architecture. While Integer Programming (IP) models can provide optimal solutions for smaller datasets, they become computationally expensive as the problem scales \cite{hwang2004practical, strichman2017near}. In an interactive environment, where administrators need to see the impact of their changes immediately, the long wait times of an exact solver are often impractical.
 
-We addressed these performance constraints by adopting a dual-solver architecture. We use Simulated Annealing for the drafting and real-time editing phases, as it provides the immediate feedback necessary for an interactive tool. This hybrid setup allows OpTime to stay fast and responsive at scale, while ensuring all results remain grounded in the formal logic of the IP-based model.
+We addressed these performance constraints by adopting a dual-solver architecture. We use Simulated Annealing for the drafting and real-time editing phases, as it provides the immediate feedback necessary for an interactive tool. This hybrid setup allows OpTime to stay fast and responsive at scale, while ensuring all results remain grounded in the formal logic of the IP-based model \cite{strichman2017near}.
 
 % ==========================================
 % PART I: Front-end, UI/UX
@@ -181,7 +181,7 @@ Once the optimization is complete, the system converts raw solver data into an i
 \begin{itemize}
     \item \textbf{Layout and Information Display}: The generated timetable uses a standard weekly grid, as shown in Figure\ref{fig:timetable_view}. Each session is rendered as a color-coded card displaying essential metadata: the course name, lecturer, and room code. This allows users to grasp the overall schedule at a glance.
     \item \textbf{Manual Adjustments and Visual Feedback}: The system supports a drag-and-drop interface for manual fine-tuning (Figure\ref{fig:timetable_adjust}). To prevent users from inadvertently breaking the scheduling logic, the UI provides real-time visual cues: valid time slots are highlighted in green, while prohibited slots (due to lecturer or room conflicts) are marked in red. This feedback loop guides users to make adjustments that remain within the bounds of the system's constraints.
-    \item \textbf{Conflict Reporting}: A ``View Report'' button allows users to access a detailed diagnostic modal (Figure\ref{fig:timetable_report}). The report categorizes findings into ``Blocking Issues'' (hard constraint violations) and ``Suggestions'' (soft constraint optimizations, such as inefficient room usage). This report helps users review the solver's logic and identify exactly where manual adjustments are needed.
+    \item \textbf{Conflict Reporting}: A ``View Report'' button allows users to access a detailed diagnostic modal (Figure\ref{fig:timetable_report}). Unlike existing timetabling interfaces that leave constraint interpretation entirely to the user \cite{mccollum2014review}, the report categorizes findings into ``Blocking Issues'' (hard constraint violations) and ``Suggestions'' (soft constraint optimizations, such as inefficient room usage). This report helps users review the solver's logic and identify exactly where manual adjustments are needed.
 \end{itemize}
 
 \begin{figure}
