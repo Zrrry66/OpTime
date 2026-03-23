@@ -23,6 +23,9 @@
 \usepackage{xcolor}
 \usepackage{subcaption}
 
+\usepackage{titlesec}
+\newcommand{\sectionbreak}{\clearpage}
+
 % find all images in this folder
 \graphicspath{ {./img/} }
 
@@ -71,12 +74,22 @@ The three parts work together in a user-driven process: the frontend collects al
 \todo[inline]{please check the citations and add them if necessary}
 Before we started building the OpTime System, our group analyzed 13 research papers to study the principles of various optimization algorithms and their practical applications in university timetabling. This research gave us a clear picture of the technical challenges and helped us decide which algorithms to use for our specific scheduling needs.
 
-\subsection{Problem Complexity and Constraints}
-The literature defines university timetabling as an NP-complete or NP-hard problem, meaning no efficient algorithm can find a perfect solution every time as the data size grows \cite{burke1997automated, schaerf1999survey}. To address this, we identified two categories of constraints \cite{burke1997automated}:
+\subsection{Problem Complexity}
+The literature defines university timetabling as an NP-complete or NP-hard problem, meaning no efficient algorithm can find a perfect solution every time as the data size grows \cite{burke1997automated, schaerf1999survey}. To address this issue, exhaustive enumeration of all feasible configurations in search of an optimal one is avoided. Instead, a suboptimal solution is sought. Several approaches exist for this purpose, including, among others\cite{alghamdi2020review}:
+
 \begin{itemize}
-    \item \textbf{Hard Constraints}: These are non-negotiable rules that must be satisfied, such as ensuring no lecture or room is double-booked.
-    \item \textbf{Soft Constraints}: These are flexible preferences, like distributing the workload evenly throughout the week or respecting specific lecturer time slots.
+    \item The use of off-the-shelf solvers (engines) based on integer programming, where the problem is formulated by specifying constraints interpretable by the model in such a way that the solution to the formulated problem corresponds to a feasible solution of the original problem.
+    
+    \item Algorithms such as simulated annealing, implemented either using existing frameworks or developed from scratch, which iteratively select improved configurations from a set of modifiable candidates, exclude certain configurations according to problem-specific constraints, and evaluate admissible configurations using an objective function.
+
+    \item The use of genetic algorithms, which mimic key aspects of the evolutionary process. In this approach, new configurations are generated from existing ones, making it conceptually related to the method described above, while also incorporating mechanisms for repairing infeasible solutions. By imposing limits on the number of iterations or steps in these and the previously mentioned algorithms, it is possible to obtain a suboptimal yet satisfactory solution within a reasonable time frame.\cite{Kristiadi2019}
+    
+    \item Hybrid approaches that combine multiple algorithms, distributing tasks between them in order to avoid evaluating all possible configurations, while compensating for this by enabling transitions from inferior to superior configurations.\cite{Yunita2018}
+
+
+    
 \end{itemize}
+
 
 \subsection{Algorithm Mechanisims and Applications}
 Our review focused on the mechanics of several optimization methods:
@@ -87,8 +100,7 @@ Our review focused on the mechanics of several optimization methods:
     \item \textbf{Fuzzy Logic}: Some models use fuzzy logic to handle uncertain human preferences, which helps in balancing conflicting soft constraints \cite{robinson2025adaptive}.
 \end{itemize}
 
-\subsection{Selection of Algorithms for OpTime}
-These insights led us to adopt a dual-solver architecture. While Integer Programming (IP) models can provide optimal solutions for smaller datasets, they become computationally expensive as the problem scales \cite{hwang2004practical, strichman2017near}. In an interactive environment, where administrators need to see the impact of their changes immediately, the long wait times of an exact solver are often impractical.
+These insights led us to adopt a dual-solver architecture. While Integer Programming (IP) models can provide near-optimal solutions, in practice such solutions may fail to meet all practical requirements. This motivates the need for a mechanism to modify the obtained solution while preserving its feasibility and overall quality. The first component of the approach, due to its deterministic nature and lack of stochasticity, is not capable of providing such flexibility, thereby necessitating a complementary method.
 
 We addressed these performance constraints by adopting a dual-solver architecture. We use Simulated Annealing for the drafting and real-time editing phases, as it provides the immediate feedback necessary for an interactive tool. This hybrid setup allows OpTime to stay fast and responsive at scale, while ensuring all results remain grounded in the formal logic of the IP-based model \cite{strichman2017near}.
 
@@ -218,68 +230,134 @@ Once the optimization is complete, the system converts raw solver data into an i
 \subsection{Technical Implementation}
 
 \subsubsection{Front-End Architecture}
-The front-end is developed using a component-based approach to ensure scalability. By separating the logic for the \textbf{Data Tables}, \textbf{Schedule Grid}, and \textbf{Notification Modals}, we achieved a highly responsive system.
+
+The front-end system is implemented as a \textbf{modular single-page application (SPA)} that integrates multiple functional views within a unified interface. The architecture is designed to separate concerns between data management, interaction logic, and visualization, ensuring both scalability and maintainability.
+
 \begin{itemize}
-    \item \textbf{Framework}: JavaScript (ES6+) for dynamic DOM manipulation and state management.
-    \item \textbf{Styling}: Custom CSS3 with Flexbox and Grid for the timetable's complex 2D-layout.
+    \item \textbf{Modular Structure}: The system is decomposed into independent feature modules (e.g., CourseModule, LecturerModule, RoomModule, TimetableModule), each responsible for a specific domain. These modules are initialized and coordinated through a central entry point, enabling loose coupling and extensibility.
+    
+    \item \textbf{Centralized Data Management}: A singleton \textbf{DataManager} maintains a consistent global state across all modules. This ensures that updates in one component (e.g., editing a course or lecturer) are immediately reflected throughout the system.
+    
+    \item \textbf{Dynamic View Switching}: The interface organizes content into multiple views (Lecturers, Courses, Rooms, Timetable), which are dynamically activated without page reload. This allows seamless navigation while preserving user context and interaction state.
+    
+    \item \textbf{Reusable UI Components}: HTML partials are loaded dynamically at runtime, enabling flexible composition of interface elements such as modals, drawers, and tool panels. This reduces redundancy and simplifies future interface extensions.
+    
+    \item \textbf{Structured Layout Design}: The interface combines a persistent sidebar for global actions (navigation, generation, data management) with a main content area for task-specific interaction. This layout supports efficient workflows and minimizes user disorientation.
+    
 \end{itemize}
+This modular architecture improves maintainability and scalability, while ensuring a clear separation of concerns.
+It also supports a responsive and predictable interface, which enhances usability and user experience.
+
+
 
 \subsubsection{The Dynamic Timetable Engine}
-The most technically demanding feature is the \textbf{Interactive Schedule Grid} (as shown in the simulation):
+
+The core functionality of the system is implemented through a \textbf{dynamic timetable engine} that integrates algorithmic scheduling results with interactive front-end manipulation. This component transforms backend optimization outputs into a structured, user-controllable visual representation.
+
 \begin{itemize}
-    \item \textbf{State-Driven Rendering}: The grid dynamically maps JSON-formatted schedule data into visual "Course Cards." Each card’s position is calculated based on its time-slot and day index.
-    \item \textbf{Conflict Visualization}: We implemented a real-time validation layer. When the system detects a scheduling overlap (e.g., a lecturer assigned to two rooms at once), the card's border color triggers a state change to \textbf{Red}, providing immediate UI feedback.
-    \item \textbf{Drag-and-Drop Interaction}: Users can manually override the algorithm by moving cards. The system re-validates the constraints on every "drop" event.
+    \item \textbf{State-Driven Rendering}: The timetable is generated from structured assignment data returned by the backend solver. Each entry is mapped to a visual "Course Card," whose position is determined by its assigned day and time-slot index. The system maintains an internal state representation of all assignments, ensuring consistency between data and visualization.
+    
+    \item \textbf{Interactive Visualization Layer}: The timetable is rendered as a grid aligned with temporal structure (days and time slots), allowing users to intuitively interpret scheduling outcomes. Each grid cell dynamically aggregates multiple assignments, supporting real-time updates and filtering (e.g., by faculty or semester).
+    
+    \item \textbf{Real-Time Conflict Visualization}: The system integrates a validation layer that highlights constraint violations directly within the interface. Critical conflicts (e.g., lecturer overlap, room capacity issues) are encoded using red visual indicators, while softer constraint violations are represented using warning colors. This enables immediate identification of problematic assignments.
+    
+    \item \textbf{Drag-and-Drop Interaction}: Users can manually adjust scheduling results by dragging course cards across the grid. The system provides visual hints about slot suitability (available, preferred, or unavailable) and prevents invalid placements. Upon each drop action, the system updates the internal state and triggers validation to maintain constraint consistency.
+    
+    \item \textbf{Iterative Update Mechanism}: The engine supports continuous refinement by allowing users to regenerate or improve schedules based on current assignments. User modifications are preserved and re-integrated into subsequent optimization steps, enabling an interactive exploration of alternative scheduling solutions.
 \end{itemize}
 
 \subsubsection{Asynchronous Operation Handling}
-To maintain a smooth user experience during heavy computations:
+
+To ensure a responsive and uninterrupted user experience, the system employs \textbf{asynchronous operation handling} for data loading, scheduling computation, and system interaction.
+
 \begin{itemize}
-    \item \textbf{Loading States}: During the "Improve Schedule" phase, an animated overlay provides visual feedback that the back-end optimization algorithm is processing.
-    \item \textbf{Promise-based API Calls}: Used \texttt{fetch} to communicate with the server-side solver, allowing the UI to remain interactive while waiting for the optimized timetable result.
+    \item \textbf{Asynchronous Initialization}: During application startup, HTML partials and initial data are loaded using asynchronous operations. The system waits for all components to be successfully initialized before rendering the interface, ensuring consistency while avoiding blocking the main thread.
+    
+    \item \textbf{Promise-Based Backend Communication}: The front-end communicates with the scheduling solver through \texttt{fetch}-based API calls. This allows timetable generation and improvement processes to run in the background while the user interface remains interactive.
+    
+    \item \textbf{Loading State Feedback}: During computationally intensive operations (e.g., schedule generation or improvement), the system displays a loading overlay with status messages (e.g., "Optimizing schedule" or "Improving schedule"). This provides clear feedback about system status and reduces user uncertainty.
+    
+    \item \textbf{Non-Blocking Interaction Model}: User interactions such as editing assignments, dragging course cards, or switching views are handled without interrupting the application flow. Updates are applied immediately to the local state, while validation and backend processing occur asynchronously.
+    
+    \item \textbf{Selective Rendering}: The system conditionally renders content based on the active view, avoiding unnecessary updates and improving performance. This ensures that only relevant components are updated in response to user actions.
 \end{itemize}
 
 \subsection{Data Interaction \& Integration}
 
 \subsubsection{Bridge Between User and Algorithm}
-The front-end acts as a sophisticated visual interpreter for the back-end optimization solver. The integration focuses on converting raw mathematical constraints into actionable user information.
+
+The system establishes a \textbf{bidirectional interaction bridge} between user input and the scheduling algorithm, transforming abstract optimization constraints into an interactive and controllable interface.
+
+\begin{itemize}
+    \item \textbf{Explicit Constraint Specification}: Users define scheduling constraints through an interactive grid interface, where each time slot can be assigned one of three states: available, preferred (soft constraint), or unavailable (hard constraint). These selections are directly translated into structured constraint data used by the optimization engine.
+    
+    \item \textbf{Unified Data Representation}: All user-defined inputs (courses, lecturers, rooms, and time constraints) are collected and managed through a centralized data layer. This ensures consistency between user actions and algorithmic computation.
+    
+    \item \textbf{Bidirectional Interaction}: Users can both initiate automated scheduling (via "Generate" or "Improve") and manually adjust results (e.g., drag-and-drop or edit dialogs). Each interaction updates the system state and can be re-evaluated by the backend solver.
+    
+    \item \textbf{Human-in-the-Loop Optimization}: The system supports an iterative cycle in which users refine schedules based on algorithmic feedback. User modifications are preserved and re-submitted to the solver, enabling continuous improvement of scheduling outcomes.
+\end{itemize}
+
 
 \subsubsection{Intelligent Conflict Reporting}
-One of the system's core strengths is the \textbf{Generation Report} modal (as seen in the workflow):
+
+To support user understanding and decision-making, the system provides \textbf{multi-level conflict detection and feedback} mechanisms.
+
 \begin{itemize}
-    \item \textbf{Categorized Feedback}: The front-end parses JSON response logs into two distinct categories: 
+    \item \textbf{Constraint Classification}: Detected violations are categorized into two types:
         \begin{itemize}
-            \item \textbf{Critical Issues}: (Red) Logical impossibilities, such as "Lecturer Availability Conflict."
-            \item \textbf{Preference Warnings}: (Yellow) Soft constraint violations, such as "Insufficient Room Capacity" or building mismatches.
+            \item \textbf{Critical Issues (Hard Constraints)}: Logical conflicts that must be resolved (e.g., lecturer overlap, room capacity violations).
+            \item \textbf{Preference Warnings (Soft Constraints)}: Non-critical deviations from preferred conditions (e.g., suboptimal time slots or room assignments).
         \end{itemize}
-    \item \textbf{Traceability}: Each error message is linked to specific IDs, allowing users to pinpoint which course or room requires manual adjustment.
+    
+    \item \textbf{Visual Encoding}: Conflicts are directly visualized within the timetable using color-coded indicators (e.g., red for critical conflicts and orange for warnings). This allows users to quickly identify problematic assignments without inspecting raw data.
+    
+    \item \textbf{Detailed Reporting}: A dedicated report interface presents structured explanations of conflicts, including their causes and suggested corrective actions. This enhances interpretability and supports efficient problem resolution.
+    
+    \item \textbf{Real-Time Validation}: After each user interaction (e.g., manual edits or drag-and-drop operations), the system triggers validation processes to ensure that the current schedule remains consistent with defined constraints.
 \end{itemize}
+
 
 \subsubsection{Optimization Workflow \& Persistence}
+
+The system supports an \textbf{iterative and mixed-initiative workflow} that combines automated optimization with user-driven refinement.
+
 \begin{itemize}
-    \item \textbf{Iterative Improvement}: The \textbf{"Improve"} button triggers a POST request that sends the user's manual adjustments back to the solver. This creates a "Human-in-the-loop" optimization cycle where the AI refines the user's manual layout.
-    \item \textbf{Data Export}: Integrated a PDF generation library that captures the high-fidelity CSS grid of the timetable and converts it into a print-ready document via the \textbf{"Export PDF"} trigger.
-    \item \textbf{State Persistence}: Implemented "Backup" and "Restore" functionality to ensure that complex scheduling progress is saved to the local storage or database, preventing data loss.
+    \item \textbf{Iterative Scheduling Process}: Users first generate an initial timetable, then refine it through manual adjustments or by invoking the "Improve" function. This enables exploration of multiple feasible solutions.
+    
+    \item \textbf{Interactive Manipulation}: Users can directly modify scheduling results through drag-and-drop and editing interfaces. These actions immediately update the system state and trigger re-validation.
+    
+    \item \textbf{Version Management}: The system provides functionality for saving, loading, and managing different timetable versions. This supports comparison between alternative solutions and prevents loss of progress.
+    
+    \item \textbf{Data Export and Persistence}: Scheduling results can be exported (e.g., as PDF) and stored persistently. Backup and restore mechanisms ensure data safety and support long-term use.
 \end{itemize}
 
-Our front-end solution successfully bridges the gap between complex algorithmic outputs and intuitive academic management. By providing real-time visual feedback and structured reporting, we have transformed a high-dimensional optimization problem into a manageable, user-friendly administrative tool.
-
+Overall, the system transforms a complex optimization problem into an interactive, transparent, and user-controllable process, improving usability, interpretability, and user trust in algorithmic decision-making.
 
 % ==========================================
 % PART II: GUROBI
 % ==========================================
 
-\section{Part II: Exact Optimization via Gurobi}
+\section{Part II: Optimization via Gurobi}
 While the Simulated Annealing module provides a fast, stochastic approach to timetable optimization, the Gurobi module takes a complementary strategy: it formulates the scheduling problem as an Integer Linear Program (ILP) and solves it to provable optimality. Integer Linear Programming is a mathematical framework in which the goal is to minimize (or maximize) a linear objective function subject to a set of linear constraints, where some or all decision variables are restricted to integer values. For binary scheduling decisions — such as whether a course is assigned to a particular room, time slot, and lecturer — this framework is a natural fit\cite{Talmor2024OptimizingAT}.
 
 Gurobi is a state-of-the-art commercial solver for mathematical optimization problems, widely used in both industry and academic research. Compared to open-source alternatives such as GLPK or CBC, Gurobi offers significantly faster solve times on large ILP instances, a clean Python API (gurobipy), and an academic license that makes it accessible for university projects. The key trade-off between the two approaches in OpTime is as follows: Gurobi guarantees finding the globally optimal schedule but it takes much longer as the problem size grows; Simulated Annealing handles large tasks much better but it doesn't guarantee a perfect result. Together, they give users a practical choice based on their specific needs.
+
+%% написать что млп тоже нп хард и сказать что существуют оптимизации, без интеджеров легко - с интеджерами сложно, говорим что сначала считаем реалы потом идем к интеджерам
 \subsection{Problem Formulation}
 In order to solve the scheduling problem using the optimization software described above, it is necessary to construct a formal model that represents both the occurrence of a class session and the natural constraints imposed by the real-world environment in which such sessions take place. This representation must be expressed in a form that can be interpreted by a specific solver implementing a particular optimization algorithm.
 
 The process of constructing this model can be conceptually divided into four stages, each corresponding to one of the fundamental components of the final optimization formulation. The first stage defines the decision variables, which form the foundation upon which all subsequent components of the model are built. The second stage introduces hard constraints, which establish the feasible boundaries of the problem and enforce the essential rules that must always be satisfied.The third stage incorporates soft constraints. Unlike hard constraints, these conditions represent preferences rather than strict requirements. They allow the model to be adjusted and adapted according to practical considerations and user needs.Finally, the fourth stage defines the objective function to be minimized. This function aggregates penalties associated with violations of soft constraints and provides the optimization solver with a quantitative criterion for evaluating different feasible schedules.
 
 \subsubsection{Decision Variables}
+The modeling process begins with the definition of decision variables as a multidimensional array of binary variables in Gurobi. Each unit entry in this array represents the assignment of a class to a specific time slot, taught by a particular instructor, for a given course, and in a designated room.
 
+In Python-style notation, this can be expressed as:
+\begin{verbatim}
+x = m.addVars(slots, teachers_ids, courses_ids, rooms_ids, vtype=GRB.BINARY, name="x")
+\end{verbatim}
+
+Such an approach enables a natural and flexible representation of the system's constraints, as all relevant information is organized within data structures describing instructors, courses, and rooms. This facilitates the logical formulation of constraints over the entire space of possible assignments.
 \subsubsection{Hard Constraints}
 \subsubsection{Soft Constraints}
 \subsubsection{Objective Function}
@@ -297,13 +375,13 @@ The process of constructing this model can be conceptually divided into four sta
 \section{Part III: Heuristic Optimization via Simulated Annealing (SA)}
 % Added this introduction paragrapgh. changed the hierarchy of the titles. The rest remain the same. Maybe you could also add a conclusion paragrapgh, and add some references from the papers we have read.
 
-While the Gurobi solver guarantees the best possible schedule for smaller tasks, the Simulated Annealing (SA) module is a faster alternative for larger and more complex problems. SA doesn't guarantee a 'perfect' mathematical solution, but it quickly finds high-quality schedules—much faster than trying every possible combination. This makes it perfect for the real-time updates in the OpTime frontend.
+While the Gurobi solver guarantees the best possible schedule for smaller tasks, the Simulated Annealing (SA) module is a faster alternative for larger and more complex problems. SA doesn't guarantee a ``perfect'' mathematical solution, but it quickly finds high-quality schedules—much faster than trying every possible combination. This makes it perfect for the real-time updates in the OpTime frontend.
 
 \subsection{Simulated Annealing Algorithm}
 
 The physical process of Annealing in metallurgy inspires Simulated Annealing. When you heat metal and then cool it slowly, the atoms have enough energy to move around and settle into a low-energy, stable configuration. If you cool it too quickly, the atoms get stuck in a suboptimal arrangement.
 
-In optimization, we use this analogy. The "energy" of our system is the cost of a schedule—i.e., the number of constraint violations it has. We start with a random schedule and make small changes to it. Here is the key insight: early in the process (at high temperature), we accept many changes, even those that make the schedule slightly worse. Starting with high temperature prevents us from getting stuck in a local optimum—a schedule that's better than all its neighbors but not the best possible schedule overall. As we continue (lowering temperature), we become more selective, mainly accepting improvements.
+In optimization, we use this analogy. The ``energy'' of our system is the cost of a schedule—i.e., the number of constraint violations it has. We start with a random schedule and make small changes to it. Here is the key insight: early in the process (at high temperature), we accept many changes, even those that make the schedule slightly worse. Starting with high temperature prevents us from getting stuck in a local optimum—a schedule that's better than all its neighbors but not the best possible schedule overall. As we continue (lowering temperature), we become more selective, mainly accepting improvements.
 
 The temperature parameter $\tau(t)$ controls this behavior. At high temperatures, we explore the solution space widely. At low temperatures, we exploit reasonable solutions by making minor refinements.
 
