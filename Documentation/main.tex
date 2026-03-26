@@ -46,7 +46,7 @@
     \textbf{Gurobi Optimization Group} \\
     Polina Evgrafova, Catalin Viscun\\[1ex]
     \textbf{Simulated Annealing Group} \\
-    Abenezer Belay, Chaithanya Thalapaneni
+    Abenezer Belay (128249), Chaithanya Thalapaneni
 }
 \date{WiSe 2025 \\ Advisor: Andreas Jakoby}
 
@@ -58,9 +58,11 @@
 \newpage
 
 \section{Introduction}
-Timetable scheduling is a hard problem. The number of possible combinations of courses, rooms, time slots, and lecturers grows very fast, and finding a schedule that satisfies everyone's constraints manually is both slow and error-prone.
+Scheduling university timetables is a fundamental yet demanding administrative task. It requires balancing the competing needs of various stakeholders, including students, lecturers, and departmental offices. In many faculties, this process is still handled manually by administrative staff—a task that is both mentally exhausting and complex. Creating a feasible schedule that satisfies everyone while respecting resource limits is a significant challenge. Our project aims to alleviate this administrative burden by integrating optimization algorithms into a user-friendly, web-based system.
 
-The project is a web-based tool to automate this process for the Faculty of Media, and it was developed by three sub-teams:
+Timetable scheduling is a computationally hard problem. The number of possible combinations between courses, rooms, time slots, and lecturers grows exponentially as data increases. Attempting to find a valid solution manually is not only slow but also highly error-prone.
+
+To address this, we developed a web-based tool specifically tailored for the Faculty of Media. The project was carried out by three sub-teams focusing on different core components:
 
 \begin{itemize}
     \item \textbf{Frontend (UI/UX)}: Built the user interface for managing lecturers, courses, and rooms, and for visualizing the generated timetable.
@@ -95,7 +97,7 @@ The literature defines university timetabling as an NP-complete or NP-hard probl
 Our review focused on the mechanics of several optimization methods:
 \begin{itemize}
     \item \textbf{Genetic Algorithms (GA)}: These use a biological evolution approach involving selection, crossover, and mutation. We found that Violated Directed Mutation (VDM) is particularly effective because it specifically targets and fixes genes that violate constraints rather than making random changes \cite{Kristiadi2019}.
-    \item \textbf{Simulated Annealing (SA)}: This algorithm keeps track of a current solution and occasionally accepts ``worse'' moves as the system ``temperature'' decreases. This mechanism helps the solver escape local optima to find a better overall schedule.
+    \item \textbf{Simulated Annealing (SA)}: This algorithm keeps track of a current solution and occasionally accepts ``worse'' moves as the system ``temperature'' decreases. This mechanism helps the solver escape local optima to find a better overall schedule. \cite{jakoby2026discrete}
     \item \textbf{Ant Colony Optimization (ACO) \& PSO}: ACO mimics ant behavior by using pheromones to find the best paths to a solution. When hybridized with Particle Swarm Optimization (PSO), the system can automatically tune its own parameters, making the search process more stable and successful \cite{Yunita2018}.
     \item \textbf{Fuzzy Logic}: Some models use fuzzy logic to handle uncertain human preferences, which helps in balancing conflicting soft constraints \cite{robinson2025adaptive}.
 \end{itemize}
@@ -266,8 +268,6 @@ The core functionality of the system is implemented through a \textbf{dynamic ti
     \item \textbf{Iterative Update Mechanism}: The engine supports continuous refinement by allowing users to regenerate or improve schedules based on current assignments. User modifications are preserved and re-integrated into subsequent optimization steps, enabling an interactive exploration of alternative scheduling solutions.
 \end{itemize}
 
-\subsubsection{Asynchronous Operation Handling}
-
 To ensure a responsive and uninterrupted user experience, the system employs \textbf{asynchronous operation handling} for data loading, scheduling computation, and system interaction.
 
 \begin{itemize}
@@ -343,6 +343,12 @@ While the Simulated Annealing module provides a fast, stochastic approach to tim
 
 Gurobi is a state-of-the-art commercial solver for mathematical optimization problems, widely used in both industry and academic research. Compared to open-source alternatives such as GLPK or CBC, Gurobi offers significantly faster solve times on large ILP instances, a clean Python API (gurobipy), and an academic license that makes it accessible for university projects. The key trade-off between the two approaches in OpTime is as follows: Gurobi guarantees finding the globally optimal schedule but it takes much longer as the problem size grows; Simulated Annealing handles large tasks much better but it doesn't guarantee a perfect result. Together, they give users a practical choice based on their specific needs.
 
+The solution produced by Gurobi is obtained, as mentioned above, via linear integer programming (ILP), which is, in general, an NP-hard problem. Consequently, solving such models to optimality can be computationally challenging, especially for large-scale instances.
+
+A widely used technique in this context is the relaxation of the model to a linear programming (LP) problem, in which the integrality constraints on the variables are temporarily removed, allowing them to take continuous values. Such LP problems can be solved in polynomial time using well-established algorithms.
+
+The solution to the relaxed problem provides a bound on the optimal value of the original ILP and serves as a foundation for more advanced methods, such as branch-and-bound and branch-and-cut, which systematically explore the solution space while leveraging LP relaxations to efficiently prune infeasible or suboptimal regions.
+
 %% написать что млп тоже нп хард и сказать что существуют оптимизации, без интеджеров легко - с интеджерами сложно, говорим что сначала считаем реалы потом идем к интеджерам
 \subsection{Problem Formulation}
 In order to solve the scheduling problem using the optimization software described above, it is necessary to construct a formal model that represents both the occurrence of a class session and the natural constraints imposed by the real-world environment in which such sessions take place. This representation must be expressed in a form that can be interpreted by a specific solver implementing a particular optimization algorithm.
@@ -359,12 +365,86 @@ x = m.addVars(slots, teachers_ids, courses_ids, rooms_ids, vtype=GRB.BINARY, nam
 
 Such an approach enables a natural and flexible representation of the system's constraints, as all relevant information is organized within data structures describing instructors, courses, and rooms. This facilitates the logical formulation of constraints over the entire space of possible assignments.
 \subsubsection{Hard Constraints}
+In the context of timetable generation, the core of the model is formed by \emph{hard constraints}, which define the set of feasible and infeasible configurations. In practical terms, these constraints correspond to physically impossible situations that must be excluded from the solution space.
+
+Such constraints can generally be expressed in two principal ways. First, by enforcing that certain entities exist in at most one instance at any given time: 
+
+\begin{verbatim}
+for r in rooms:                                  
+    for s in slots:                              
+        m.addConstr(
+            gp.quicksum(x[s, t, c, r]
+                        for t in teachers
+                        for c in courses) <= 1), ...)
+\end{verbatim}
+
+Second, constraints can enforce the complete absence of certain configurations:
+\begin{verbatim}
+for t_id in teachers_id_list:
+    teacher = dict_teacher_id_obj[t_id]
+    for slot in teacher.hard_time_constr:
+        m.addConstr(
+            gp.quicksum(
+                x[slot, t_id, c_id, r_id]
+                for c_id in courses_ids
+                for r_id in rooms_ids
+            ) == 0), ...)
+\end{verbatim}
+
+The meaning of these examples is as follows: at any given time, each room can host at most one class, taught by a single instructor for a single course; additionally, for any time slot excluded by a given instructor, there exists no room in which that instructor is assigned to teach any course.
+
+As illustrated, once the problem is formulated in a form suitable for a solver, it becomes a powerful and flexible tool, allowing for a wide range of constraints to be incorporated and adjusted in accordance with real-world requirements.
 \subsubsection{Soft Constraints}
+Soft constraints are formulated in a similar manner; however, instead of explicitly forbidding certain configurations, additional variables and linear expressions are introduced to represent configurations that are undesirable to varying degrees.
+
+For example, consider the following expression:
+\begin{verbatim}
+if room_by_id[r1].address != room_by_id[r2].address:
+    expr += (
+        x[s, t_id, c_id, r1]
+        + x[s_next, t_id, c_id, r2]
+    )
+
+return weight * expr
+\end{verbatim}
+
+Such a linear expression becomes strictly positive whenever the desired condition is violated. It aggregates contributions from all configuration components in which the condition does not hold, thereby quantifying the extent of the violation.
+
+In some cases, it is convenient to introduce auxiliary binary variables to explicitly model compound conditions:
+\begin{verbatim}
+if room_by_id[r_id].address in remote_buildings:
+    z = m.addVar(vtype=GRB.BINARY)
+    m.addConstr(z <= x[s1, t_id, c_id, r_id])
+    m.addConstr(z <= x[s2, t_id, c_id, r_id])
+    m.addConstr(z >= x[s1, t_id, c_id, r_id] + x[s2, t_id, c_id, r_id] - 1)
+    expr += z
+
+return weight * expr
+\end{verbatim}
+
+Here, the auxiliary variable $z$ captures the joint occurrence of two assignments, enabling a more precise formulation of the corresponding penalty term. The overall expression is then constructed as a weighted sum of such variables.
+
+By formulating constraints of different types and relative importance in this manner, the model gains the ability to impose a hierarchy of preferences. This allows the solver not only to ensure feasibility with respect to hard constraints, but also to optimize solution quality by minimizing violations of soft constraints according to their assigned weights.
 \subsubsection{Objective Function}
 
 \subsection{Implementation Details}
 
 \subsection{Integration with the Frontend}
+To provide an end-to-end workflow from data entry to an actual timetable, the project connects a browser-based frontend (JavaScript) with a FastAPI backend (Python) that runs the optimization model in Gurobi. This technology split was a small hurdle at first: the UI manages state and interactions in the browser, whereas the solver requires consistent, typed structures and stable integer identifiers. The integration resolves this by using a clear REST interface and an explicit transformation layer on the backend.
+
+The frontend maintains courses, lecturers, and rooms in local arrays and synchronizes them with the backend via REST. On startup, the current dataset is loaded through \texttt{GET /api/data}; any modifications performed in the UI are persisted through \texttt{POST /api/data}. The backend stores the state in \texttt{data/database.json}, which keeps the development setup simple, transparent, and reproducible.
+
+A central linking component is the weekly availability editor. The UI implements a fixed $7\times7$ grid using keys of the form \texttt{"dayIndex\_slotIndex"}, e.g.\ \texttt{"0\_0"} for Monday in the first slot or \texttt{"6\_6"} for Sunday in the last slot. In the UI, these selections are stored as lists of slot keys (\texttt{available\_slots} and optionally \texttt{unavailable\_slots}). In the backend, they are translated into the solver's constraint sets, most importantly \texttt{hard\_time\_constr} (forbidden slots) and, in principle, also \texttt{soft\_time\_constr} and preference sets if those model components are enabled. Concretely, if an \texttt{available\_slots} list is present, all non-selected cells are treated as unavailable (via complement construction) and are passed to the solver as hard time restrictions. This makes UI interactions in the grid directly enforceable as solver constraints.
+
+Timetable generation is triggered via \texttt{POST /api/plan}. The backend pipeline reads the latest UI database snapshot, converts it into a canonical solver input format, and then runs Gurobi (optionally without an improvement stage). The conversion happens in the adapter \texttt{ui\_db\_to\_canonical\_input}, where (i) UI identifiers (e.g.\ \texttt{l\_5749}) are deterministically mapped to integer IDs, (ii) courses, lecturers, and rooms are converted into the internal data structures, and (iii) UI slot keys are translated into solver time indices.
+
+For consistency, the backend generates 49 fixed time slots ($7$ days $\times$ $7$ slots) and provides bijective mappings between UI keys and \texttt{timeslot\_id}s:
+\[
+\texttt{"0\_0"} \mapsto 1,\ \ldots,\ \texttt{"6\_6"} \mapsto 49.
+\]
+This mapping ensures that time information coming from the UI can be unambiguously converted into Gurobi indices. In particular, \texttt{hard\_time\_constr} is injected as a hard constraint into the model, ensuring that no returned solution violates the availability configured in the frontend.
+
+Finally, the backend response returns the computed schedule as a list of assignments containing \texttt{timeslot\_id}, \texttt{teacher\_id}, \texttt{course\_id}, and \texttt{room\_id}. Optionally, the canonical input including mapping information can be returned as well (\texttt{include\_input=true}), allowing the frontend to reconstruct grid positions and human-readable labels without additional database queries. Overall, this yields a compact yet robust integration between UI, persistence, and optimization despite the initial JS/Python interface friction.
 
 \subsection{Results and Evaluation}
 
