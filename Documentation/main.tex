@@ -44,9 +44,9 @@
     \textbf{Front-End \& UI/UX Group} \\
     Haonan Wu (126815), Ruyue Zhao (127561) \\[1ex]
     \textbf{Gurobi Optimization Group} \\
-    Polina Evgrafova, Catalin Viscun\\[1ex]
+    Polina Evgrafova, Catalin Viscun (125396)\\[1ex]
     \textbf{Simulated Annealing Group} \\
-    Abenezer Belay (128249), Chaithanya Thalapaneni
+    Abenezer Belay (128249), Chaithanya Thalapaneni  (127081)
 }
 \date{WiSe 2025 \\ Advisor: Andreas Jakoby}
 
@@ -58,7 +58,7 @@
 \newpage
 
 \section{Introduction}
-Scheduling university timetables is a fundamental yet demanding administrative task. It requires balancing the competing needs of various stakeholders, including students, lecturers, and departmental offices. In many faculties, this process is still handled manually by administrative staff—a task that is both mentally exhausting and complex. Creating a feasible schedule that satisfies everyone while respecting resource limits is a significant challenge. Our project aims to alleviate this administrative burden by integrating optimization algorithms into a user-friendly, web-based system.
+Scheduling university timetables is a fundamental yet demanding administrative task. It requires balancing the competing needs of various stakeholders, including students, lecturers, and departmental offices. In many faculties, this process is still handled manually by administrative staff---a task that is both mentally exhausting and complex. Creating a feasible schedule that satisfies everyone while respecting resource limits is a significant challenge. Our project aims to alleviate this administrative burden by integrating optimization algorithms into a user-friendly, web-based system.
 
 Timetable scheduling is a computationally hard problem. The number of possible combinations between courses, rooms, time slots, and lecturers grows exponentially as data increases. Attempting to find a valid solution manually is not only slow but also highly error-prone.
 
@@ -73,7 +73,6 @@ To address this, we developed a web-based tool specifically tailored for the Fac
 The three parts work together in a user-driven process: the frontend collects all input data and sends it to the Gurobi solver to create a base schedule. Users can then manually adjust the results through the interface. After that, the Simulated Annealing module takes that version and improves it further. The final result is shown on the frontend, ready to be reviewed and exported. This document covers each component in detail.
 
 \section{Literature Review}
-\todo[inline]{please check the citations and add them if necessary}
 Before we started building the OpTime System, our group analyzed 13 research papers to study the principles of various optimization algorithms and their practical applications in university timetabling. This research gave us a clear picture of the technical challenges and helped us decide which algorithms to use for our specific scheduling needs.
 
 \subsection{Problem Complexity}
@@ -87,11 +86,7 @@ The literature defines university timetabling as an NP-complete or NP-hard probl
     \item The use of genetic algorithms, which mimic key aspects of the evolutionary process. In this approach, new configurations are generated from existing ones, making it conceptually related to the method described above, while also incorporating mechanisms for repairing infeasible solutions. By imposing limits on the number of iterations or steps in these and the previously mentioned algorithms, it is possible to obtain a suboptimal yet satisfactory solution within a reasonable time frame.\cite{Kristiadi2019}
     
     \item Hybrid approaches that combine multiple algorithms, distributing tasks between them in order to avoid evaluating all possible configurations, while compensating for this by enabling transitions from inferior to superior configurations.\cite{Yunita2018}
-
-
-    
 \end{itemize}
-
 
 \subsection{Algorithm Mechanisims and Applications}
 Our review focused on the mechanics of several optimization methods:
@@ -129,23 +124,26 @@ OpTime prioritizes administrative efficiency by using a dashboard-centric interf
 
 \subsubsection{The Interactive Availability Matrix}
 To bridge the gap between faculty preferences and the automated scheduler, we developed an intuitive Availability Matrix (Figure \ref{fig:matrix}).
-Instead of asking users to fill out complex forms, we designed a 7-day visual grid divided into 90-minute blocks. The interface covers the core academic window (09:15–18:30) while also providing extended slots at 07:30–09:00 and 19:00–20:30. These additions allow the system to handle early or late sessions required by specific departments.
+Instead of asking users to fill out complex forms, we designed a 7-day visual grid divided into 90-minute blocks. The interface covers the core academic window (09:15--18:30) while also providing extended slots at 07:30--09:00 and 19:00--20:30. These additions allow the system to handle early or late sessions required by specific departments.
 
-The system uses a straightforward three-color code to define how the optimization engine should handle different time slots:
+The system uses a straightforward four-color code to define how the optimization engine should handle different time slots:
 
 \begin{itemize}
-    \item \textbf{Red (Unavailable)}: acts as a hard boundary. The solver will strictly avoid scheduling a course or a lecturer in these time slots.
-    \item \textbf{Yellow (Preferred)}: identifies the ``sweet spots'', where the interests of faculty, students, and the department overlap. These soft preferences serve as optimization targets, allowing the solver to refine the schedule by balancing faculty convenience, student learning rhythms, and departmental resource efficiency.
-    \item \textbf{Green (Available)}: serves as a critical fallback. If a preferred slot cannot be met due to scheduling conflicts, the system automatically uses these green areas to ensure every class is successfully placed and the final schedule remains valid.
+\item \textbf{Red (Unavailable)}: Acts as a hard boundary. The solver is strictly prohibited from scheduling any course or lecturer in these time slots.
+\item \textbf{Blue (Preferred)}: Represents the preferred time slots for the lecturer or the specific course.
+\item \textbf{Green (Available)}: Serves as a standard fallback. If the preferred blue slots cannot be met due to scheduling conflicts, the system uses these areas to ensure the final schedule remains valid.
+\item \textbf{Yellow (Rather Not)}: Identifies a negative soft preference. The algorithm tries to avoid these slots whenever possible, utilizing them only as a last resort to find a feasible solution.
 \end{itemize}
 
-The real breakthrough in this module, however, is the Smart Syncing mechanism designed to eliminate redundant work. In a large department, manually entering the same availability for five different courses is tedious and prone to mistakes. We solved this by unlocking the data flow between lecturers and their assigned classes. With the``Copy to Assigned Courses'' feature, a teacher’s general availability can be pushed to all their assigned classes in one click. Conversely, when setting up a specific course, the system can automatically pull the assigned teacher's schedule. This ensures that the data stays consistent across the entire platform, preventing the common error where a class is scheduled at a time the teacher is actually busy.
+To minimize redundant data entry, the system includes a Smart Syncing mechanism. Manually inputting the same availability for multiple courses is inefficient and often leads to errors. We addressed this by synchronizing the data flow between lecturers and their assigned courses.
+
+Through the ``Copy to Assigned Courses'' feature, a lecturer’s general availability can be pushed to all their assigned classes in one action. Conversely, when configuring a specific course, the system can automatically pull the assigned lecturer's schedule. This ensures data consistency across the platform and prevents scheduling conflicts, such as placing a class during a time when the lecturer is marked as unavailable.
 
 \begin{figure}
     \centering
     \begin{subfigure}[b]{0.8\textwidth}
         \centering
-        \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_availability_lecturer.png}
+        \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_availability_lecturer1.jpeg}
         \caption{Lecturer's view of availability and preferences.}
         \label{fig:matrix_l}
     \end{subfigure}
@@ -154,7 +152,7 @@ The real breakthrough in this module, however, is the Smart Syncing mechanism de
 
     \begin{subfigure}[b]{0.8\textwidth}
         \centering
-        \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_availability_course.png}
+        \includegraphics[width=\textwidth, cfbox=lightgray 0.5pt 0pt]{Documentation/img/ui_availability_course1.jpg}
         \caption{Course-specific time slot constraints.}
         \label{fig:matrix_c}
     \end{subfigure}
@@ -257,7 +255,7 @@ It also supports a responsive and predictable interface, which enhances usabilit
 The core functionality of the system is implemented through a \textbf{dynamic timetable engine} that integrates algorithmic scheduling results with interactive front-end manipulation. This component transforms backend optimization outputs into a structured, user-controllable visual representation.
 
 \begin{itemize}
-    \item \textbf{State-Driven Rendering}: The timetable is generated from structured assignment data returned by the backend solver. Each entry is mapped to a visual "Course Card," whose position is determined by its assigned day and time-slot index. The system maintains an internal state representation of all assignments, ensuring consistency between data and visualization.
+    \item \textbf{State-Driven Rendering}: The timetable is generated from structured assignment data returned by the backend solver. Each entry is mapped to a visual ``Course Card'', whose position is determined by its assigned day and time-slot index. The system maintains an internal state representation of all assignments, ensuring consistency between data and visualization.
     
     \item \textbf{Interactive Visualization Layer}: The timetable is rendered as a grid aligned with temporal structure (days and time slots), allowing users to intuitively interpret scheduling outcomes. Each grid cell dynamically aggregates multiple assignments, supporting real-time updates and filtering (e.g., by faculty or semester).
     
@@ -275,7 +273,7 @@ To ensure a responsive and uninterrupted user experience, the system employs \te
     
     \item \textbf{Promise-Based Backend Communication}: The front-end communicates with the scheduling solver through \texttt{fetch}-based API calls. This allows timetable generation and improvement processes to run in the background while the user interface remains interactive.
     
-    \item \textbf{Loading State Feedback}: During computationally intensive operations (e.g., schedule generation or improvement), the system displays a loading overlay with status messages (e.g., "Optimizing schedule" or "Improving schedule"). This provides clear feedback about system status and reduces user uncertainty.
+    \item \textbf{Loading State Feedback}: During computationally intensive operations (e.g., schedule generation or improvement), the system displays a loading overlay with status messages (e.g., ``Optimizing schedule'' or ``Improving schedule''). This provides clear feedback about system status and reduces user uncertainty.
     
     \item \textbf{Non-Blocking Interaction Model}: User interactions such as editing assignments, dragging course cards, or switching views are handled without interrupting the application flow. Updates are applied immediately to the local state, while validation and backend processing occur asynchronously.
     
@@ -293,7 +291,7 @@ The system establishes a \textbf{bidirectional interaction bridge} between user 
     
     \item \textbf{Unified Data Representation}: All user-defined inputs (courses, lecturers, rooms, and time constraints) are collected and managed through a centralized data layer. This ensures consistency between user actions and algorithmic computation.
     
-    \item \textbf{Bidirectional Interaction}: Users can both initiate automated scheduling (via "Generate" or "Improve") and manually adjust results (e.g., drag-and-drop or edit dialogs). Each interaction updates the system state and can be re-evaluated by the backend solver.
+    \item \textbf{Bidirectional Interaction}: Users can both initiate automated scheduling (via ``Generate'' or ``Improve'') and manually adjust results (e.g., drag-and-drop or edit dialogs). Each interaction updates the system state and can be re-evaluated by the backend solver.
     
     \item \textbf{Human-in-the-Loop Optimization}: The system supports an iterative cycle in which users refine schedules based on algorithmic feedback. User modifications are preserved and re-submitted to the solver, enabling continuous improvement of scheduling outcomes.
 \end{itemize}
@@ -323,7 +321,7 @@ To support user understanding and decision-making, the system provides \textbf{m
 The system supports an \textbf{iterative and mixed-initiative workflow} that combines automated optimization with user-driven refinement.
 
 \begin{itemize}
-    \item \textbf{Iterative Scheduling Process}: Users first generate an initial timetable, then refine it through manual adjustments or by invoking the "Improve" function. This enables exploration of multiple feasible solutions.
+    \item \textbf{Iterative Scheduling Process}: Users first generate an initial timetable, then refine it through manual adjustments or by invoking the ``Improve'' function. This enables exploration of multiple feasible solutions.
     
     \item \textbf{Interactive Manipulation}: Users can directly modify scheduling results through drag-and-drop and editing interfaces. These actions immediately update the system state and trigger re-validation.
     
@@ -339,7 +337,7 @@ Overall, the system transforms a complex optimization problem into an interactiv
 % ==========================================
 
 \section{Part II: Optimization via Gurobi}
-While the Simulated Annealing module provides a fast, stochastic approach to timetable optimization, the Gurobi module takes a complementary strategy: it formulates the scheduling problem as an Integer Linear Program (ILP) and solves it to provable optimality. Integer Linear Programming is a mathematical framework in which the goal is to minimize (or maximize) a linear objective function subject to a set of linear constraints, where some or all decision variables are restricted to integer values. For binary scheduling decisions — such as whether a course is assigned to a particular room, time slot, and lecturer — this framework is a natural fit\cite{Talmor2024OptimizingAT}.
+While the Simulated Annealing module provides a fast, stochastic approach to timetable optimization, the Gurobi module takes a complementary strategy: it formulates the scheduling problem as an Integer Linear Program (ILP) and solves it to provable optimality. Integer Linear Programming is a mathematical framework in which the goal is to minimize (or maximize) a linear objective function subject to a set of linear constraints, where some or all decision variables are restricted to integer values. For binary scheduling decisions---such as whether a course is assigned to a particular room, time slot, and lecturer---this framework is a natural fit\cite{Talmor2024OptimizingAT}.
 
 Gurobi is a state-of-the-art commercial solver for mathematical optimization problems, widely used in both industry and academic research. Compared to open-source alternatives such as GLPK or CBC, Gurobi offers significantly faster solve times on large ILP instances, a clean Python API (gurobipy), and an academic license that makes it accessible for university projects. The key trade-off between the two approaches in OpTime is as follows: Gurobi guarantees finding the globally optimal schedule but it takes much longer as the problem size grows; Simulated Annealing handles large tasks much better but it doesn't guarantee a perfect result. Together, they give users a practical choice based on their specific needs.
 
@@ -426,9 +424,26 @@ Here, the auxiliary variable $z$ captures the joint occurrence of two assignment
 
 By formulating constraints of different types and relative importance in this manner, the model gains the ability to impose a hierarchy of preferences. This allows the solver not only to ensure feasibility with respect to hard constraints, but also to optimize solution quality by minimizing violations of soft constraints according to their assigned weights.
 \subsubsection{Objective Function}
+The aforementioned minimization constitutes the primary objective handled by Gurobi. In this setting, the solver is tasked, first, with satisfying all hard constraints, and second, with violating soft constraints only to the extent and in the manner that minimizes the total weighted penalty.
 
-\subsection{Implementation Details}
+The assigned weights serve to express the relative importance of different constraints. For instance, low-priority preferences may include keeping classes in the same room; medium-priority constraints may enforce that instructors teach within their preferred time slots; and high-priority requirements may ensure that courses are held within the appropriate faculty and that mandatory and semi-mandatory courses do not overlap within a given program of study.
 
+This weighted formulation enables a nuanced trade-off between competing objectives, guiding the solver toward solutions that are not only feasible but also aligned with practical and organizational priorities.
+
+\subsection{Other implementation Details}
+In addition to the modeling approach described above, several auxiliary components were implemented to improve usability and facilitate integration with the existing codebase. In particular, a central module was developed to define the interaction workflow between the constructed model, the solver, and the resulting data. This module is also responsible for collecting and exposing diagnostic information about the model, such as feasibility status (feasible/infeasible), execution time, and related metrics.
+
+Furthermore, to enhance user interaction, an error and constraint-violation aggregator was implemented. This component provides structured feedback in cases where no feasible solution is found, enabling users to better understand the causes of infeasibility and to adjust input data or constraints accordingly.
+
+
+\subsection{Gurobi installation}
+The first step in the implementation process was obtaining an academic license for Gurobi via its official website:
+\begin{verbatim}
+https://www.gurobi.com/academia/academic-program-and-licenses/
+\end{verbatim}
+In our case, an individual student license was used. For deploying the solution in a production environment, a web license or a site license would likely be required.
+
+Subsequently, Gurobi and its Python interface were installed using \texttt{pip}. The license setup and activation process is documented in the user account dashboard, under the ``Licenses'' section.
 \subsection{Integration with the Frontend}
 To provide an end-to-end workflow from data entry to an actual timetable, the project connects a browser-based frontend (JavaScript) with a FastAPI backend (Python) that runs the optimization model in Gurobi. This technology split was a small hurdle at first: the UI manages state and interactions in the browser, whereas the solver requires consistent, typed structures and stable integer identifiers. The integration resolves this by using a clear REST interface and an explicit transformation layer on the backend.
 
@@ -447,7 +462,13 @@ This mapping ensures that time information coming from the UI can be unambiguous
 Finally, the backend response returns the computed schedule as a list of assignments containing \texttt{timeslot\_id}, \texttt{teacher\_id}, \texttt{course\_id}, and \texttt{room\_id}. Optionally, the canonical input including mapping information can be returned as well (\texttt{include\_input=true}), allowing the frontend to reconstruct grid positions and human-readable labels without additional database queries. Overall, this yields a compact yet robust integration between UI, persistence, and optimization despite the initial JS/Python interface friction.
 
 \subsection{Results and Evaluation}
+In summary, we have implemented software capable of generating schedules that satisfy all hard constraints when feasible, while also producing suboptimal solutions to accommodate soft constraints.
 
+The software was tested on a limited dataset, in which it performed adequately. However, a significant increase in computational time was observed as problem size grew, and for datasets approaching realistic scale, we expect runtime to exceed 10 minutes or more.
+
+In the absence of a complete dataset, weights for soft constraints were manually assigned, as there was no independent metric for schedule quality beyond the minimization objective. Ideally, with access to full data, it would be possible to calibrate these weights to best suit specific instances of the scheduling problem.
+
+The current state of the project, and in particular its Gurobi-based component, leaves considerable room for future development. In particular, improvements could be made by incorporating user feedback, such as identifying missing but desired soft constraints and adjusting weights to better reflect practical priorities.
 % ==========================================
 % {Part III: Heuristic Optimization via Simulated Annealing
 % ==========================================
@@ -455,13 +476,13 @@ Finally, the backend response returns the computed schedule as a list of assignm
 \section{Part III: Heuristic Optimization via Simulated Annealing (SA)}
 % Added this introduction paragrapgh. changed the hierarchy of the titles. The rest remain the same. Maybe you could also add a conclusion paragrapgh, and add some references from the papers we have read.
 
-While the Gurobi solver guarantees the best possible schedule for smaller tasks, the Simulated Annealing (SA) module is a faster alternative for larger and more complex problems. SA doesn't guarantee a ``perfect'' mathematical solution, but it quickly finds high-quality schedules—much faster than trying every possible combination. This makes it perfect for the real-time updates in the OpTime frontend.
+While the Gurobi solver guarantees the best possible schedule for smaller tasks, the Simulated Annealing (SA) module is a faster alternative for larger and more complex problems. SA doesn't guarantee a ``perfect'' mathematical solution, but it quickly finds high-quality schedules — much faster than trying every possible combination. This makes it perfect for the real-time updates in the OpTime frontend.
 
 \subsection{Simulated Annealing Algorithm}
 
 The physical process of Annealing in metallurgy inspires Simulated Annealing. When you heat metal and then cool it slowly, the atoms have enough energy to move around and settle into a low-energy, stable configuration. If you cool it too quickly, the atoms get stuck in a suboptimal arrangement.
 
-In optimization, we use this analogy. The ``energy'' of our system is the cost of a schedule—i.e., the number of constraint violations it has. We start with a random schedule and make small changes to it. Here is the key insight: early in the process (at high temperature), we accept many changes, even those that make the schedule slightly worse. Starting with high temperature prevents us from getting stuck in a local optimum—a schedule that's better than all its neighbors but not the best possible schedule overall. As we continue (lowering temperature), we become more selective, mainly accepting improvements.
+In optimization, we use this analogy. The ``energy'' of our system is the cost of a schedule — i.e., the number of constraint violations it has. We start with a random schedule and make small changes to it. Here is the key insight: early in the process (at high temperature), we accept many changes, even those that make the schedule slightly worse. Starting with high temperature prevents us from getting stuck in a local optimum — a schedule that's better than all its neighbors but not the best possible schedule overall. As we continue (lowering temperature), we become more selective, mainly accepting improvements.
 
 The temperature parameter $\tau(t)$ controls this behavior. At high temperatures, we explore the solution space widely. At low temperatures, we exploit reasonable solutions by making minor refinements.
 
@@ -568,9 +589,6 @@ where $k$ is a constant and $\tau(t)$ is the current temperature.
 Example: Current schedule has cost 200, neighbor has cost 250, temperature is 100, and $k=1$. Then $\Delta = 50$ and $P(\text{accept}) = e^{-0.5} \approx 0.606$ (60\% chance). This probability decreases as temperature drops.
 
 Our implementation guarantees that hard constraints are never violated by validating each neighbor during generation, ensuring only valid neighbors are considered.
-
-\subsection{Results and Evaluation}
-% you can add a short paragraph here summarizing the practical performance of the SA algorithm, and any limitations
 
 \section{Conclusion}
 OpTime started as a project for the Faculty of Media, but the system is general enough to be extended to other faculties or even the whole university with relatively small changes to the data model.
